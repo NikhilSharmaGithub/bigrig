@@ -3,6 +3,8 @@ import { Breadcrumbs } from "@/components/catalog/Breadcrumbs";
 import { ProductGrid } from "@/components/catalog/ProductGrid";
 import { getDeals } from "@/lib/queries";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Deals",
   description: "Save on heavy-duty truck and trailer parts. Top markdowns, while stock lasts.",

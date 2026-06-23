@@ -6,6 +6,8 @@ import { getTopSellers, getDeals } from "@/lib/queries";
 import { ProductCard } from "@/components/product/ProductCard";
 import { HomeVehicleFinder } from "@/components/home/HomeVehicleFinder";
 
+export const dynamic = "force-dynamic";
+
 export default async function HomePage() {
   // Live data with a graceful fallback so the page renders even without a DB.
   let topSellers: ProductCardItem[] = featuredProducts;

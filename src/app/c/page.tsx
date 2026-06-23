@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/catalog/Breadcrumbs";
 import { getTopCategories } from "@/lib/queries";
 
+// DB-backed listing — render at request time, not at build (no DB during build).
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Shop All Categories",
   description: "Browse heavy-duty truck and trailer parts by category.",

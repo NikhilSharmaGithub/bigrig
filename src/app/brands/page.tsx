@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/catalog/Breadcrumbs";
 import { getAllBrands } from "@/lib/queries";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "All Brands",
   description: "Shop heavy-duty truck parts from the brands fleets trust.",
