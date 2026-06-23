@@ -1,36 +1,75 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Big Rig Components
 
-## Getting Started
+Heavy-duty truck &amp; trailer parts e-commerce store.
 
-First, run the development server:
+## Stack
+
+| Layer | Tech |
+|---|---|
+| Framework | Next.js 16 (App Router) + React 19 + TypeScript |
+| Styling | Tailwind CSS v4 |
+| Database | PostgreSQL + Drizzle ORM |
+| Payments | Stripe (Phase 2) |
+| Auth | Auth.js (Phase 3) |
+| Hosting | Vercel |
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # then fill in DATABASE_URL
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Database
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Money is stored as integer **cents** throughout (`price_cents`, `total_cents`, …).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run db:generate   # create SQL migration from src/db/schema.ts
+npm run db:push       # push schema directly to the DB (dev)
+npm run db:migrate    # run committed migrations (prod)
+npm run db:studio     # browse data in Drizzle Studio
+```
 
-## Learn More
+Set `DATABASE_URL` in `.env.local` first (Supabase: Project Settings → Database → Connection string → URI).
 
-To learn more about Next.js, take a look at the following resources:
+## Project structure
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+  app/                 # routes (App Router)
+  components/
+    brand/             # Logo, brand assets
+    layout/            # Header, Footer, SearchBar
+    product/           # ProductCard, etc.
+  db/
+    schema.ts          # Drizzle schema (15 tables)
+    index.ts           # db client
+  lib/
+    catalog.ts         # category/brand/vehicle taxonomy
+    sample-products.ts # placeholder data (replaced by DB in Phase 1)
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Roadmap
 
-## Deploy on Vercel
+- [x] **Phase 0 — Foundation:** scaffold, design system, app shell, homepage, DB schema
+- [x] **Phase 1 — Catalog:** category/PLP/PDP pages, search, shop-by-vehicle + fitment, DB seed *(code complete — run `db:push` + `db:seed` to populate)*
+- [x] **Phase 2 — Commerce:** cart (guest + user), Stripe checkout, webhook, orders *(needs `STRIPE_*` env to transact)*
+- [x] **Phase 3 — Accounts:** auth (session + bcrypt), order history + tracking, returns/RMA, addresses
+- [x] **Phase 4 — Admin:** dashboard, product/inventory CRUD, order status, returns management *(at `/admin`, requires an admin user)*
+- [x] **Phase 5 — Launch:** SEO (sitemap/robots/JSON-LD/OG), content + policy pages, contact form + admin inbox, deals, branded 404, deploy prep
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### To go live locally
+1. `DATABASE_URL` in `.env.local` → `npm run db:push && npm run db:seed`
+2. For checkout: add `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, run `stripe listen --forward-to localhost:3000/api/stripe/webhook`
+3. Set a strong `AUTH_SECRET` (`openssl rand -base64 32`)
+4. For the admin panel: register an account, then promote it —
+   `UPDATE users SET role = 'admin' WHERE email = 'you@example.com';` — and visit `/admin`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Deploy to Vercel
+1. Push this repo to GitHub and import it in Vercel.
+2. Add env vars in Vercel: `DATABASE_URL`, `AUTH_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_BASE_URL` (your production URL).
+3. Run migrations against the production DB: `npm run db:migrate` (or `db:push`), then `db:seed` once.
+4. In the Stripe dashboard, add a webhook to `https://<your-domain>/api/stripe/webhook` for `checkout.session.completed` and paste its signing secret into `STRIPE_WEBHOOK_SECRET`.
+5. Set `NEXT_PUBLIC_BASE_URL` to your domain so canonical URLs, the sitemap, and OG tags are correct.
