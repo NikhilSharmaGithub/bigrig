@@ -32,7 +32,6 @@ export default function OpengraphImage() {
         }}
       >
         <div style={{ display: "flex", height: 14, width: "100%", position: "absolute", top: 0, backgroundColor: "#e4002b" }} />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={EMBLEM} width={180} height={180} alt="" />
         <div style={{ display: "flex", marginTop: 28, fontSize: 76, fontWeight: 800, letterSpacing: -1 }}>
           <span style={{ color: "#e4002b" }}>NOVA</span>

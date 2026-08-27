@@ -21,12 +21,14 @@ export function SearchBar() {
   const [open, setOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
+  // Derived so stale results never show while the query is too short.
+  const suggestions = q.trim().length >= 2 ? items : [];
+
   useEffect(() => {
     const query = q.trim();
-    if (query.length < 2) {
-      setItems([]);
-      return;
-    }
+    // Too short to search. `suggestions` derives to [] below, so there is no
+    // need to setState synchronously here (that causes cascading renders).
+    if (query.length < 2) return;
     const t = setTimeout(() => {
       fetch(`/api/search/suggest?q=${encodeURIComponent(query)}`)
         .then((r) => r.json())
@@ -65,7 +67,7 @@ export function SearchBar() {
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onFocus={() => items.length > 0 && setOpen(true)}
+          onFocus={() => suggestions.length > 0 && setOpen(true)}
           placeholder="Search by part #, name, or brand…"
           className="w-full rounded-l-md border-0 bg-white px-4 py-2.5 text-sm text-steel-900 placeholder:text-steel-400 focus:outline-none focus:ring-2 focus:ring-brand"
           aria-label="Search parts"
@@ -83,9 +85,9 @@ export function SearchBar() {
         </button>
       </form>
 
-      {open && items.length > 0 && (
+      {open && suggestions.length > 0 && (
         <div className="absolute left-0 right-0 z-50 mt-1 overflow-hidden rounded-md border border-border bg-white text-left shadow-2xl">
-          {items.map((s) => (
+          {suggestions.map((s) => (
             <Link
               key={s.slug}
               href={`/p/${s.slug}`}

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
 
 // Branded runtime-error boundary. Replaces Next.js's raw "server error" page
@@ -37,12 +38,12 @@ export default function Error({
         >
           Try again
         </button>
-        <a
+        <Link
           href="/"
           className="rounded-md border border-border px-6 py-3 font-semibold text-steel-700 transition-colors hover:border-brand hover:text-brand"
         >
           Back to home
-        </a>
+        </Link>
       </div>
       {error.digest && (
         <p className="mt-6 text-xs text-steel-400">Reference: {error.digest}</p>
