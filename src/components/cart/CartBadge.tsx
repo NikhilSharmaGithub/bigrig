@@ -20,6 +20,8 @@ export function CartBadge() {
     };
   }, []);
 
+  if (count <= 0) return null;
+
   return (
     <span className="absolute -right-0 -top-0 grid h-5 w-5 place-items-center rounded-full bg-brand text-[10px] font-bold">
       {count > 99 ? "99+" : count}

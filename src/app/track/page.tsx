@@ -3,7 +3,7 @@ import { TrackForm } from "@/components/account/TrackForm";
 
 export const metadata: Metadata = {
   title: "Track Your Order",
-  description: "Check the status of your Big Rig Components order.",
+  description: "Check the status of your Nova A to Z Parts order.",
 };
 
 type Props = { searchParams: Promise<{ order?: string }> };

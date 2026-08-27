@@ -34,7 +34,7 @@ export default async function StorePage({ params, searchParams }: Props) {
   return (
     <CatalogView
       title={vendor.storeName}
-      description={vendor.bio ?? "Marketplace seller on Big Rig Components"}
+      description={vendor.bio ?? "Marketplace seller on Nova A to Z Parts"}
       breadcrumbs={[{ label: "Stores" }, { label: vendor.storeName }]}
       result={result}
       searchParams={sp}

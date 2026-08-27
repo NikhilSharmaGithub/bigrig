@@ -31,7 +31,7 @@ export default async function AdminLayout({
         <aside className="hidden w-56 shrink-0 flex-col border-r border-border bg-steel-900 text-steel-300 lg:flex">
           <div className="border-b border-steel-700 p-4">
             <p className="font-display text-lg font-bold uppercase tracking-wide text-white">
-              BRC Admin
+              Nova Admin
             </p>
             <p className="truncate text-xs text-steel-400">{admin.email}</p>
           </div>

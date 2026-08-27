@@ -72,7 +72,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
       <p className="text-center text-sm text-steel-500">
         {mode === "login" ? (
           <>
-            New to Big Rig?{" "}
+            New to Nova?{" "}
             <Link href="/register" className="font-semibold text-brand hover:underline">
               Create an account
             </Link>

@@ -4,6 +4,7 @@ import { categories } from "@/lib/catalog";
 import { SearchBar } from "@/components/layout/SearchBar";
 import { CartBadge } from "@/components/cart/CartBadge";
 import { WishlistNavLink } from "@/components/wishlist/WishlistNavLink";
+import { SITE } from "@/lib/site";
 
 export function Header() {
   return (
@@ -15,11 +16,11 @@ export function Header() {
             Free shipping over $99 · 30-day hassle-free returns
           </span>
           <div className="flex items-center gap-4">
-            <a href="tel:+18005551234" className="hover:text-white">
-              1-800-555-1234
+            <a href={SITE.phoneHref} className="hover:text-white">
+              {SITE.phone}
             </a>
             <Link href="/sell" className="font-semibold text-accent hover:text-white">
-              Sell on BRC
+              Sell on Nova
             </Link>
             <Link href="/track" className="hover:text-white">
               Track Order

@@ -4,7 +4,7 @@ import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Contact Us",
-  description: "Get in touch with the Big Rig Components parts team by phone, email, or message.",
+  description: "Get in touch with the Nova A to Z Parts parts team by phone, email, or message.",
 };
 
 export default function ContactPage() {

@@ -14,7 +14,7 @@ export default async function RegisterPage() {
         Create Account
       </h1>
       <p className="mt-1 text-steel-500">
-        Faster checkout, order tracking, and fleet pricing with BRC Pro.
+        Faster checkout, order tracking, and fleet pricing with Nova Pro.
       </p>
       <div className="mt-8 rounded-xl border border-border bg-white p-6 shadow-sm">
         <AuthForm mode="register" />

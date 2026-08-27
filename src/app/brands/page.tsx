@@ -22,6 +22,17 @@ export default async function BrandsPage() {
         </h1>
       </div>
 
+      {brands.length === 0 && (
+        <div className="mt-8 rounded-lg border border-dashed border-border bg-surface p-12 text-center">
+          <p className="font-display text-lg font-bold text-steel-700">
+            Brands are loading
+          </p>
+          <p className="mt-1 text-sm text-steel-500">
+            Our brand directory is being set up. Please check back shortly.
+          </p>
+        </div>
+      )}
+
       <div className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {brands.map((b) => (
           <Link

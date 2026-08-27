@@ -71,7 +71,7 @@ export async function getSalesByVendor(): Promise<VendorSales[]> {
 
   return rows.map((r) => ({
     vendorId: r.vendorId,
-    name: r.storeName ?? "Big Rig Components (House)",
+    name: r.storeName ?? "Nova A to Z Parts (House)",
     slug: r.slug,
     units: r.units,
     revenueCents: r.revenue,

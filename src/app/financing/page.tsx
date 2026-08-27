@@ -5,7 +5,7 @@ import { PageShell } from "@/components/content/PageShell";
 export const metadata: Metadata = {
   title: "Financing",
   description:
-    "Flexible ways to pay for the parts you need — buy now pay later at checkout, or apply for a business line of credit with BRC Pro.",
+    "Flexible ways to pay for the parts you need — buy now pay later at checkout, or apply for a business line of credit with Nova Pro.",
 };
 
 export default function FinancingPage() {
@@ -29,7 +29,7 @@ export default function FinancingPage() {
       <h2>Business line of credit</h2>
       <p>
         Fleets and shops can apply for a business line of credit with net terms
-        through <Link href="/pro">BRC Pro</Link>. Consolidate your parts spend,
+        through <Link href="/pro">Nova Pro</Link>. Consolidate your parts spend,
         pay on a schedule that matches your billing cycle, and give drivers
         approved purchasing.
       </p>

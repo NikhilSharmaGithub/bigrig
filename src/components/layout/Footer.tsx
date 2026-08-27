@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
 import { categories } from "@/lib/catalog";
+import { SITE } from "@/lib/site";
 
 const footerCols: { title: string; links: { label: string; href: string }[] }[] = [
   {
@@ -26,7 +27,7 @@ const footerCols: { title: string; links: { label: string; href: string }[] }[] 
     title: "Company",
     links: [
       { label: "About Us", href: "/about" },
-      { label: "BRC Pro", href: "/pro" },
+      { label: "Nova Pro", href: "/pro" },
       { label: "Financing", href: "/financing" },
       { label: "Careers", href: "/careers" },
     ],
@@ -46,10 +47,10 @@ export function Footer() {
               Millions of parts, real-time inventory, expert support.
             </p>
             <a
-              href="tel:+18005551234"
+              href={SITE.phoneHref}
               className="mt-4 inline-block font-display text-2xl font-bold text-white"
             >
-              1-800-555-1234
+              {SITE.phone}
             </a>
           </div>
           {footerCols.map((col) => (
@@ -86,7 +87,7 @@ export function Footer() {
 
       <div className="border-t border-steel-700">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-xs text-steel-500 sm:flex-row">
-          <p>© {new Date().getFullYear()} Big Rig Components. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Nova A to Z Parts. All rights reserved.</p>
           <div className="flex gap-4">
             <Link href="/privacy" className="hover:text-white">Privacy</Link>
             <Link href="/terms" className="hover:text-white">Terms</Link>

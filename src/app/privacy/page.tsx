@@ -4,7 +4,7 @@ import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "How Big Rig Components collects, uses, and protects your information.",
+  description: "How Nova A to Z Parts collects, uses, and protects your information.",
 };
 
 export default function PrivacyPage() {

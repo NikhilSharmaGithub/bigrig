@@ -8,8 +8,8 @@ type LogoProps = {
 };
 
 /**
- * Big Rig Components wordmark + emblem.
- * Emblem: a hex lug-nut framing stylized "BRC" with a forward speed slash.
+ * Nova A to Z Parts wordmark + emblem.
+ * Emblem: a hex lug-nut framing stylized "NAZ" with a forward speed slash.
  */
 export function Logo({ className, variant = "light", showText = true }: LogoProps) {
   const textColor = variant === "light" ? "text-white" : "text-steel-900";
@@ -40,23 +40,23 @@ export function Logo({ className, variant = "light", showText = true }: LogoProp
         />
         {/* Speed slash */}
         <path d="M14 30 L30 16" stroke="var(--color-brand)" strokeWidth="4" strokeLinecap="round" />
-        {/* BRC mark */}
+        {/* NAZ mark */}
         <text
           x="24"
           y="30"
           textAnchor="middle"
           fontFamily="var(--font-display)"
           fontWeight="700"
-          fontSize="15"
+          fontSize="14"
           fill="#ffffff"
         >
-          BRC
+          NAZ
         </text>
       </svg>
       {showText && (
         <span className="flex flex-col leading-none">
           <span className={`font-display text-xl font-bold tracking-wide ${textColor}`}>
-            BIG RIG <span className="text-brand">COMPONENTS</span>
+            <span className="text-brand">NOVA</span> A-TO-Z PARTS
           </span>
           <span className={`text-[10px] font-medium uppercase tracking-[0.2em] ${subColor}`}>
             Heavy-Duty Truck &amp; Trailer Parts

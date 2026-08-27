@@ -67,6 +67,7 @@ export default function RootLayout({
             "@type": "Organization",
             name: SITE.name,
             url: SITE.url,
+            logo: `${SITE.url}/icon.svg`,
             description: SITE.description,
             telephone: SITE.phone,
             address: {

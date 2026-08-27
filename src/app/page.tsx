@@ -151,7 +151,7 @@ export default async function HomePage() {
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-10 text-center sm:flex-row sm:text-left">
             <div>
               <h2 className="font-display text-2xl font-bold text-white">
-                Run a fleet? Get BRC Pro.
+                Run a fleet? Get Nova Pro.
               </h2>
               <p className="mt-1 text-steel-300">
                 Volume pricing, net terms, and a dedicated parts specialist.
@@ -161,7 +161,7 @@ export default async function HomePage() {
               href="/pro"
               className="shrink-0 rounded-md bg-brand px-6 py-3 font-semibold text-white transition-colors hover:bg-brand-dark"
             >
-              Learn about BRC Pro
+              Learn about Nova Pro
             </Link>
           </div>
         </div>

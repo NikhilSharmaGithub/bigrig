@@ -41,16 +41,39 @@ import type {
 /*  Categories                                                                 */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Wrap a read query so a transient DB/backend failure degrades to a safe
+ * fallback (empty list, etc.) instead of throwing a 500. Detail lookups that
+ * must distinguish "missing" from "broken" are intentionally left to throw.
+ */
+async function safeQuery<T>(
+  run: () => Promise<T>,
+  fallback: T,
+  label: string,
+): Promise<T> {
+  try {
+    return await run();
+  } catch (err) {
+    console.error(`[queries] ${label} failed:`, err);
+    return fallback;
+  }
+}
+
 export async function getTopCategories() {
-  return db.query.categories.findMany({
-    where: (c, { isNull }) => isNull(c.parentId),
-    orderBy: (c, { asc }) => asc(c.position),
-    with: {
-      children: {
+  return safeQuery(
+    () =>
+      db.query.categories.findMany({
+        where: (c, { isNull }) => isNull(c.parentId),
         orderBy: (c, { asc }) => asc(c.position),
-      },
-    },
-  });
+        with: {
+          children: {
+            orderBy: (c, { asc }) => asc(c.position),
+          },
+        },
+      }),
+    [],
+    "getTopCategories",
+  );
 }
 
 export async function getCategoryBySlug(slug: string) {
@@ -117,6 +140,7 @@ export async function listProducts(opts: ListOpts): Promise<ProductListResult> {
   const page = Math.max(1, opts.page ?? 1);
   const pageSize = opts.pageSize ?? 24;
 
+  try {
   // Conditions that apply to BOTH results and brand facets (everything but brand).
   const baseConds = [eq(products.isActive, true)];
 
@@ -208,6 +232,10 @@ export async function listProducts(opts: ListOpts): Promise<ProductListResult> {
       count: f.c,
     })),
   };
+  } catch (err) {
+    console.error("[queries] listProducts failed:", err);
+    return { ...EMPTY, page, pageSize };
+  }
 }
 
 type ListRow = {
@@ -296,26 +324,32 @@ export async function getRelatedProducts(
 }
 
 export async function getTopSellers(limit = 6): Promise<ProductCardItem[]> {
-  const rows = await db
-    .select({
-      slug: products.slug,
-      name: products.name,
-      partNumber: products.partNumber,
-      priceCents: products.priceCents,
-      listPriceCents: products.listPriceCents,
-      ratingAvg: products.ratingAvg,
-      ratingCount: products.ratingCount,
-      brandName: brands.name,
-      qty: inventory.quantity,
-      imageUrl: primaryImageSql,
-    })
-    .from(products)
-    .leftJoin(brands, eq(products.brandId, brands.id))
-    .leftJoin(inventory, eq(inventory.productId, products.id))
-    .where(eq(products.isActive, true))
-    .orderBy(desc(products.ratingCount))
-    .limit(limit);
-  return rows.map(toCardItem);
+  return safeQuery(
+    async () => {
+      const rows = await db
+        .select({
+          slug: products.slug,
+          name: products.name,
+          partNumber: products.partNumber,
+          priceCents: products.priceCents,
+          listPriceCents: products.listPriceCents,
+          ratingAvg: products.ratingAvg,
+          ratingCount: products.ratingCount,
+          brandName: brands.name,
+          qty: inventory.quantity,
+          imageUrl: primaryImageSql,
+        })
+        .from(products)
+        .leftJoin(brands, eq(products.brandId, brands.id))
+        .leftJoin(inventory, eq(inventory.productId, products.id))
+        .where(eq(products.isActive, true))
+        .orderBy(desc(products.ratingCount))
+        .limit(limit);
+      return rows.map(toCardItem);
+    },
+    [],
+    "getTopSellers",
+  );
 }
 
 /** Product cards for a specific list of slugs, preserving the given order. */
@@ -374,36 +408,42 @@ export async function getFrequentlyBoughtTogether(
 }
 
 export async function getDeals(limit = 24): Promise<ProductCardItem[]> {
-  const rows = await db
-    .select({
-      slug: products.slug,
-      name: products.name,
-      partNumber: products.partNumber,
-      priceCents: products.priceCents,
-      listPriceCents: products.listPriceCents,
-      ratingAvg: products.ratingAvg,
-      ratingCount: products.ratingCount,
-      brandName: brands.name,
-      qty: inventory.quantity,
-      imageUrl: primaryImageSql,
-    })
-    .from(products)
-    .leftJoin(brands, eq(products.brandId, brands.id))
-    .leftJoin(inventory, eq(inventory.productId, products.id))
-    .where(
-      and(
-        eq(products.isActive, true),
-        isNotNull(products.listPriceCents),
-        gt(products.listPriceCents, products.priceCents),
-      ),
-    )
-    .orderBy(
-      desc(
-        sql`(${products.listPriceCents} - ${products.priceCents})::numeric / NULLIF(${products.listPriceCents}, 0)`,
-      ),
-    )
-    .limit(limit);
-  return rows.map(toCardItem);
+  return safeQuery(
+    async () => {
+      const rows = await db
+        .select({
+          slug: products.slug,
+          name: products.name,
+          partNumber: products.partNumber,
+          priceCents: products.priceCents,
+          listPriceCents: products.listPriceCents,
+          ratingAvg: products.ratingAvg,
+          ratingCount: products.ratingCount,
+          brandName: brands.name,
+          qty: inventory.quantity,
+          imageUrl: primaryImageSql,
+        })
+        .from(products)
+        .leftJoin(brands, eq(products.brandId, brands.id))
+        .leftJoin(inventory, eq(inventory.productId, products.id))
+        .where(
+          and(
+            eq(products.isActive, true),
+            isNotNull(products.listPriceCents),
+            gt(products.listPriceCents, products.priceCents),
+          ),
+        )
+        .orderBy(
+          desc(
+            sql`(${products.listPriceCents} - ${products.priceCents})::numeric / NULLIF(${products.listPriceCents}, 0)`,
+          ),
+        )
+        .limit(limit);
+      return rows.map(toCardItem);
+    },
+    [],
+    "getDeals",
+  );
 }
 
 /* -------------------------------------------------------------------------- */
@@ -411,7 +451,11 @@ export async function getDeals(limit = 24): Promise<ProductCardItem[]> {
 /* -------------------------------------------------------------------------- */
 
 export async function getAllBrands() {
-  return db.select().from(brands).orderBy(asc(brands.name));
+  return safeQuery(
+    () => db.select().from(brands).orderBy(asc(brands.name)),
+    [],
+    "getAllBrands",
+  );
 }
 
 export async function getBrandBySlug(slug: string) {
@@ -423,11 +467,17 @@ export async function getBrandBySlug(slug: string) {
 /* -------------------------------------------------------------------------- */
 
 export async function getVehicleMakes(): Promise<string[]> {
-  const rows = await db
-    .selectDistinct({ make: vehicles.make })
-    .from(vehicles)
-    .orderBy(asc(vehicles.make));
-  return rows.map((r) => r.make);
+  return safeQuery(
+    async () => {
+      const rows = await db
+        .selectDistinct({ make: vehicles.make })
+        .from(vehicles)
+        .orderBy(asc(vehicles.make));
+      return rows.map((r) => r.make);
+    },
+    [],
+    "getVehicleMakes",
+  );
 }
 
 export async function getVehiclesForMake(make: string) {

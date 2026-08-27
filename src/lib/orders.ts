@@ -5,7 +5,7 @@ import { db } from "@/db";
 import { orders } from "@/db/schema";
 
 export function generateOrderNumber(): string {
-  return "BRC-" + randomBytes(4).toString("hex").toUpperCase();
+  return "NAZ-" + randomBytes(4).toString("hex").toUpperCase();
 }
 
 export async function getOrderByNumber(orderNumber: string) {

@@ -22,8 +22,11 @@ export function ProductCard({ product }: { product: ProductCardItem }) {
             loading="lazy"
           />
         ) : (
-          <div className="flex h-full w-full items-center justify-center rounded bg-gradient-to-br from-steel-100 to-steel-200 text-steel-400">
+          <div className="flex h-full w-full flex-col items-center justify-center gap-2 rounded bg-gradient-to-br from-steel-100 to-steel-200 text-steel-400">
             <PartIcon />
+            <span className="text-[11px] font-medium uppercase tracking-wide">
+              Image coming soon
+            </span>
           </div>
         )}
         {discount > 0 && (
@@ -92,10 +95,9 @@ function Stars({ rating }: { rating: number }) {
 
 function PartIcon() {
   return (
-    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
       <circle cx="12" cy="12" r="3" />
-      <path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9 17 7M7 17l-2.1 2.1" strokeLinecap="round" />
-      <circle cx="12" cy="12" r="9" strokeDasharray="2 2" />
     </svg>
   );
 }

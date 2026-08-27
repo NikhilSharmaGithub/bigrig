@@ -7,12 +7,12 @@ import { orderItems, orders, products } from "./schema";
 
 /**
  * Inserts a few demo paid/refunded orders so the admin Payments dashboard has
- * data to show. Safe to re-run — it clears prior BRC-DEMO* orders first.
- * Delete them anytime: DELETE FROM orders WHERE order_number LIKE 'BRC-DEMO%';
+ * data to show. Safe to re-run — it clears prior NAZ-DEMO* orders first.
+ * Delete them anytime: DELETE FROM orders WHERE order_number LIKE 'NAZ-DEMO%';
  */
 async function main() {
   console.log("⏳ Clearing previous demo orders…");
-  await db.delete(orders).where(like(orders.orderNumber, "BRC-DEMO%"));
+  await db.delete(orders).where(like(orders.orderNumber, "NAZ-DEMO%"));
 
   // A vendor product (if one exists) + some house products.
   const vendorProduct = await db.query.products.findFirst({
@@ -38,7 +38,7 @@ async function main() {
     lines: Line[];
   }[] = [
     {
-      number: "BRC-DEMO001",
+      number: "NAZ-DEMO001",
       email: "fleet.buyer@example.com",
       status: "paid",
       pi: "pi_demo_Aa1001",
@@ -48,7 +48,7 @@ async function main() {
       ],
     },
     {
-      number: "BRC-DEMO002",
+      number: "NAZ-DEMO002",
       email: "owner.operator@example.com",
       status: "delivered",
       pi: "pi_demo_Bb2002",
@@ -58,7 +58,7 @@ async function main() {
       ],
     },
     {
-      number: "BRC-DEMO003",
+      number: "NAZ-DEMO003",
       email: "shop.manager@example.com",
       status: "paid",
       pi: "pi_demo_Cc3003",
@@ -68,7 +68,7 @@ async function main() {
       ],
     },
     {
-      number: "BRC-DEMO004",
+      number: "NAZ-DEMO004",
       email: "returns@example.com",
       status: "refunded",
       pi: "pi_demo_Dd4004",

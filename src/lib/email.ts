@@ -44,7 +44,7 @@ function shell(bodyHtml: string): string {
   <div style="background:#f5f6f8;padding:24px 0;font-family:Arial,Helvetica,sans-serif;color:#16181d;">
     <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden;border:1px solid #e2e5ea;">
       <div style="background:#16181d;padding:20px 24px;">
-        <span style="font-size:20px;font-weight:bold;letter-spacing:0.5px;color:#fff;">BIG RIG <span style="color:#e4002b;">COMPONENTS</span></span>
+        <span style="font-size:20px;font-weight:bold;letter-spacing:0.5px;color:#fff;"><span style="color:#e4002b;">NOVA</span> A-TO-Z PARTS</span>
         <div style="font-size:10px;letter-spacing:2px;color:#8a909c;text-transform:uppercase;">Heavy-Duty Truck &amp; Trailer Parts</div>
       </div>
       <div style="padding:24px;">${bodyHtml}</div>

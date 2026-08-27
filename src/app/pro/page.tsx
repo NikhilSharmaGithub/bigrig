@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import { PageShell } from "@/components/content/PageShell";
 
 export const metadata: Metadata = {
-  title: "BRC Pro for Fleets",
+  title: "Nova Pro for Fleets",
   description:
-    "BRC Pro gives fleets volume pricing, net terms, and a dedicated parts specialist. Built for owner-operators and shops that buy in bulk.",
+    "Nova Pro gives fleets volume pricing, net terms, and a dedicated parts specialist. Built for owner-operators and shops that buy in bulk.",
 };
 
 const PERKS = [
@@ -20,11 +20,11 @@ const PERKS = [
 export default function ProPage() {
   return (
     <PageShell
-      title="BRC Pro"
+      title="Nova Pro"
       subtitle="Built for fleets, shops, and owner-operators who buy in volume."
     >
       <p>
-        BRC Pro is our membership for businesses that run on parts. Get better
+        Nova Pro is our membership for businesses that run on parts. Get better
         pricing, flexible terms, and a specialist who treats your uptime like
         their job — because it is.
       </p>
@@ -42,7 +42,7 @@ export default function ProPage() {
       </div>
 
       <div className="rounded-xl bg-steel-900 p-6 text-center text-white">
-        <h2 className="text-white">Ready to run with BRC Pro?</h2>
+        <h2 className="text-white">Ready to run with Nova Pro?</h2>
         <p className="mt-1 text-steel-300">
           Create an account, then talk to our team about fleet pricing.
         </p>

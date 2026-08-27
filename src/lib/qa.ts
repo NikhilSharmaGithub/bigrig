@@ -20,7 +20,7 @@ export async function canAnswerFor(
   productId: string,
 ): Promise<{ allowed: boolean; as: string }> {
   if (!user) return { allowed: false, as: "" };
-  if (isUserAdmin(user)) return { allowed: true, as: "Big Rig Components" };
+  if (isUserAdmin(user)) return { allowed: true, as: "Nova A to Z Parts" };
   const vendor = await getVendorForUser(user.id);
   if (vendor) {
     const p = await db.query.products.findFirst({

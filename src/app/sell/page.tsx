@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getVendorForUser } from "@/lib/vendor";
 
 export const metadata: Metadata = {
-  title: "Sell on Big Rig Components",
+  title: "Sell on Nova A to Z Parts",
   description: "Open a store and sell heavy-duty truck and trailer parts to fleets nationwide.",
 };
 
@@ -30,7 +30,7 @@ export default async function SellPage() {
       <div className="bg-steel-900 text-white">
         <div className="mx-auto max-w-5xl px-4 py-14">
           <h1 className="font-display text-4xl font-bold uppercase tracking-wide">
-            Sell on Big Rig Components
+            Sell on Nova A to Z Parts
           </h1>
           <p className="mt-2 max-w-2xl text-steel-300">
             Turn your parts inventory into sales. Open a store in minutes and

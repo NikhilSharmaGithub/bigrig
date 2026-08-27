@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!p) return { title: "Part Not Found" };
 
   // A custom meta title is used verbatim (absolute); otherwise the layout
-  // template appends "| Big Rig Components".
+  // template appends "| Nova A to Z Parts".
   const title: Metadata["title"] = p.metaTitle
     ? { absolute: p.metaTitle }
     : `${p.name} — ${p.partNumber}`;
@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const description = (
     p.metaDescription ||
     p.description ||
-    `${p.name}${p.brand ? ` by ${p.brand.name}` : ""} — heavy-duty truck & trailer part. In stock at Big Rig Components.`
+    `${p.name}${p.brand ? ` by ${p.brand.name}` : ""} — heavy-duty truck & trailer part. In stock at Nova A to Z Parts.`
   ).slice(0, 200);
   const keywords = p.keywords
     ? p.keywords.split(",").map((k) => k.trim()).filter(Boolean)

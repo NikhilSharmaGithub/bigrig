@@ -4,14 +4,14 @@ import { PageShell } from "@/components/content/PageShell";
 
 export const metadata: Metadata = {
   title: "Careers",
-  description: "Join the team keeping trucks on the road. Open roles at Big Rig Components.",
+  description: "Join the team keeping trucks on the road. Open roles at Nova A to Z Parts.",
 };
 
 const ROLES = [
   ["Parts Specialist", "Dallas, TX · Full-time", "Help fleets find the right part, fast."],
   ["Warehouse Associate", "Dallas, TX · Full-time", "Pick, pack, and ship with precision."],
   ["Software Engineer", "Remote · Full-time", "Build the storefront and tools that power the business."],
-  ["Fleet Account Manager", "Remote · Full-time", "Own relationships with our BRC Pro fleet customers."],
+  ["Fleet Account Manager", "Remote · Full-time", "Own relationships with our Nova Pro fleet customers."],
 ];
 
 export default function CareersPage() {

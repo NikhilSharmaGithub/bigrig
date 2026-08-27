@@ -1,5 +1,5 @@
 /**
- * Catalog taxonomy + reference data for Big Rig Components.
+ * Catalog taxonomy + reference data for Nova A to Z Parts.
  * Phase 0: static placeholder data to drive nav and homepage.
  * Phase 1+: this is replaced/seeded into the database.
  */

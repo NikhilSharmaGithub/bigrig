@@ -25,7 +25,7 @@ export function TrackForm({ defaultOrder }: { defaultOrder?: string }) {
             <input
               name="order"
               defaultValue={defaultOrder}
-              placeholder="BRC-XXXXXXXX"
+              placeholder="NAZ-XXXXXXXX"
               className="w-full rounded-md border border-border bg-white px-3 py-2.5 text-sm text-steel-900 focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </label>

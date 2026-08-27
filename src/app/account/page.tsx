@@ -26,7 +26,7 @@ export default async function AccountDashboard() {
         <Stat label="Orders" value={String(orders.length)} href="/account/orders" />
         <Stat
           label="Account"
-          value={user.role === "pro" ? "BRC Pro" : "Standard"}
+          value={user.role === "pro" ? "Nova Pro" : "Standard"}
           href="/pro"
         />
         <Stat label="Saved Addresses" value="Manage" href="/account/addresses" />
@@ -45,7 +45,7 @@ export default async function AccountDashboard() {
             href="/sell"
             className="rounded-md bg-accent px-5 py-2.5 text-sm font-semibold text-steel-900 hover:bg-accent-dark"
           >
-            Start Selling on BRC
+            Start Selling on Nova
           </Link>
         )}
         {isUserAdmin(user) && (

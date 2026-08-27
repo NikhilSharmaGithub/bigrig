@@ -34,7 +34,7 @@ const FAQS: [string, React.ReactNode][] = [
   [
     "Do you offer fleet pricing?",
     <>
-      Yes — <Link href="/pro">BRC Pro</Link> gives fleets volume pricing, net
+      Yes — <Link href="/pro">Nova Pro</Link> gives fleets volume pricing, net
       terms, and a dedicated specialist.
     </>,
   ],
