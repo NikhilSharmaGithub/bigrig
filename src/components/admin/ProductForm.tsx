@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import { KeywordsInput } from "@/components/admin/KeywordsInput";
 import { ImageUploader } from "@/components/admin/ImageUploader";
 
@@ -54,7 +54,17 @@ export function ProductForm({
   const save = submitLabel ?? (mode === "create" ? "Create Product" : "Save Changes");
 
   return (
-    <form action={formAction} className="max-w-3xl space-y-5 pb-4">
+    <form
+      action={formAction}
+      // React resets uncontrolled fields after a form action completes, which wiped the whole
+      // product when the server only returned a validation error; submitting manually keeps them.
+      onSubmit={(e) => {
+        e.preventDefault();
+        const data = new FormData(e.currentTarget);
+        startTransition(() => formAction(data));
+      }}
+      className="max-w-3xl space-y-5 pb-4"
+    >
       {mode === "edit" && v.id && <input type="hidden" name="id" value={v.id} />}
 
       {/* Basics */}

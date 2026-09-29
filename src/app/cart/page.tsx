@@ -79,6 +79,11 @@ export default async function CartPage() {
                     <span className="text-xs text-steel-500">
                       #{item.partNumber}
                     </span>
+                    {!item.inStock && (
+                      <span className="block text-xs font-medium text-steel-500">
+                        Backorder — ships in 3–5 days
+                      </span>
+                    )}
                   </div>
                   <span className="font-display whitespace-nowrap text-lg font-bold text-steel-900">
                     {formatPrice(item.lineTotalCents)}

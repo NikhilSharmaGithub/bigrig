@@ -54,19 +54,34 @@ function dollarsToCents(v: string): number | null {
   return Number.isFinite(n) ? Math.round(n * 100) : null;
 }
 
+/** The form's slug field is optional ("auto-from-name"); derive one that no other product uses. */
+async function productSlugFrom(name: string, exceptId?: string): Promise<string> {
+  const base = slugify(name);
+  let slug = base;
+  for (let i = 0; i < 5; i++) {
+    const hit = await db.query.products.findFirst({
+      where: eq(products.slug, slug),
+      columns: { id: true },
+    });
+    if (!hit || hit.id === exceptId) return slug;
+    slug = `${base}-${Math.random().toString(36).slice(2, 6)}`;
+  }
+  return slug;
+}
+
 export async function createProductAction(
   _prev: AdminState,
   formData: FormData,
 ): Promise<AdminState> {
   await requireAdmin();
   const name = f(formData, "name");
-  const slug = f(formData, "slug");
   const partNumber = f(formData, "partNumber");
   const price = dollarsToCents(f(formData, "price"));
 
-  if (!name || !slug || !partNumber || price === null) {
-    return { error: "Name, slug, part number, and price are required." };
+  if (!name || !partNumber || price === null) {
+    return { error: "Name, part number, and price are required." };
   }
+  const slug = f(formData, "slug") || (await productSlugFrom(name));
 
   let productId: string;
   try {
@@ -109,14 +124,14 @@ export async function updateProductAction(
   await requireAdmin();
   const id = f(formData, "id");
   const name = f(formData, "name");
-  const slug = f(formData, "slug");
   const partNumber = f(formData, "partNumber");
   const price = dollarsToCents(f(formData, "price"));
 
   if (!id) return { error: "Missing product id." };
-  if (!name || !slug || !partNumber || price === null) {
-    return { error: "Name, slug, part number, and price are required." };
+  if (!name || !partNumber || price === null) {
+    return { error: "Name, part number, and price are required." };
   }
+  const slug = f(formData, "slug") || (await productSlugFrom(name, id));
 
   await db
     .update(products)
@@ -166,6 +181,17 @@ export async function toggleProductActiveAction(
     .set({ isActive: makeActive, updatedAt: new Date() })
     .where(eq(products.id, id));
   revalidatePath("/admin/products");
+}
+
+/**
+ * Permanent. Images, specs, stock, fitment, cart/wishlist entries, reviews and Q&A cascade away;
+ * past orders keep their line items because order_items snapshot name/part #/price (set null).
+ */
+export async function deleteProductAction(id: string): Promise<void> {
+  await requireAdmin();
+  await db.delete(products).where(eq(products.id, id));
+  revalidatePath("/admin/products");
+  revalidatePath("/", "layout");
 }
 
 export async function updateOrderStatusAction(

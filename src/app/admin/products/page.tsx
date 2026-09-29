@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { getAdminProducts } from "@/lib/admin";
-import { toggleProductActiveAction } from "@/app/actions/admin";
+import { deleteProductAction, toggleProductActiveAction } from "@/app/actions/admin";
+import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
 import { formatPrice } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Admin · Products" };
@@ -88,6 +89,10 @@ export default async function AdminProductsPage() {
                         {p.isActive ? "Hide" : "Show"}
                       </button>
                     </form>
+                    <DeleteProductButton
+                      name={p.name}
+                      action={deleteProductAction.bind(null, p.id)}
+                    />
                   </div>
                 </td>
               </tr>

@@ -5,10 +5,11 @@ import { addToCartAction } from "@/app/actions/cart";
 
 export function AddToCart({
   productSlug,
-  disabled,
+  backorder,
 }: {
   productSlug: string;
-  disabled?: boolean;
+  /** Out of stock: still orderable, ships in 3–5 days (see /shipping). */
+  backorder?: boolean;
 }) {
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
@@ -48,15 +49,15 @@ export function AddToCart({
       <button
         type="button"
         onClick={add}
-        disabled={disabled || pending}
+        disabled={pending}
         className="flex-1 rounded-md bg-brand px-8 py-3 font-semibold text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:bg-steel-400"
       >
-        {disabled
-          ? "Out of Stock"
-          : pending
-            ? "Adding…"
-            : added
-              ? "✓ Added to Cart"
+        {pending
+          ? "Adding…"
+          : added
+            ? "✓ Added to Cart"
+            : backorder
+              ? "Add to Cart — Backorder"
               : "Add to Cart"}
       </button>
     </div>

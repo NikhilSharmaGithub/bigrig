@@ -38,7 +38,7 @@ function splitParagraphs(s: string | null | undefined): string[] {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const p = await getProductBySlug(slug);
-  if (!p) return { title: "Part Not Found" };
+  if (!p || !p.isActive) return { title: "Part Not Found" };
 
   // A custom meta title is used verbatim (absolute); otherwise the layout
   // template appends "| Nova A to Z Parts".
@@ -80,7 +80,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function ProductPage({ params }: Props) {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
-  if (!product) notFound();
+  // hidden by an admin or from a suspended vendor: search already excludes it, so should direct links
+  if (!product || !product.isActive) notFound();
 
   const qty = product.inventory?.quantity ?? 0;
   const inStock = qty > 0;
@@ -264,7 +265,7 @@ export default async function ProductPage({ params }: Props) {
               {inStock ? `● In Stock (${qty}) — Ships Today` : "○ Backorder — Ships in 3–5 days"}
             </p>
             <div className="mt-4">
-              <AddToCart productSlug={product.slug} disabled={!inStock} />
+              <AddToCart productSlug={product.slug} backorder={!inStock} />
             </div>
             <WishlistHeart
               slug={product.slug}
