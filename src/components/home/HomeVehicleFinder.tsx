@@ -24,7 +24,7 @@ export function HomeVehicleFinder({ makes }: { makes: string[] }) {
       <h2 className="font-display text-lg font-bold uppercase tracking-wide text-white">
         Find parts for your truck
       </h2>
-      <p className="mt-1 text-sm text-steel-400">Filter to parts guaranteed to fit.</p>
+      <p className="mt-1 text-sm text-steel-400">Filter to parts listed for your truck.</p>
       <div className="mt-4 space-y-3">
         <select
           value={make}

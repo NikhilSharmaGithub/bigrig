@@ -65,8 +65,10 @@ export function Header() {
       </div>
 
       {/* Category nav */}
-      <nav className="bg-steel-800 text-white shadow-md">
-        <div className="mx-auto flex max-w-7xl items-stretch gap-0 overflow-x-auto px-2">
+      <nav className="relative bg-steel-800 text-white shadow-md">
+        {/* fade hints that the category row scrolls sideways when it doesn't fit */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-steel-800 to-transparent" />
+        <div className="mx-auto flex max-w-7xl items-stretch gap-0 overflow-x-auto px-2 pr-8">
           {categories.map((cat) => (
             <div key={cat.slug} className="group relative">
               <Link

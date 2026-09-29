@@ -16,7 +16,7 @@ import {
 
 export const metadata: Metadata = {
   title: "Shop by Vehicle",
-  description: "Find parts guaranteed to fit your truck by make, model, and year.",
+  description: "Find parts listed for your truck by make, model, and year.",
 };
 
 type Props = { searchParams: Promise<RawSearchParams> };
@@ -89,7 +89,7 @@ export default async function VehiclePage({ searchParams }: Props) {
     <Finder
       crumbs={[{ label: "Shop by Vehicle" }]}
       title="Shop by Vehicle"
-      subtitle="Select your truck make to find parts guaranteed to fit."
+      subtitle="Select your truck make to see parts listed for it."
     >
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {makes.map((m) => (

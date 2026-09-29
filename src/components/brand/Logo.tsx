@@ -55,10 +55,10 @@ export function Logo({ className, variant = "light", showText = true }: LogoProp
       </svg>
       {showText && (
         <span className="flex flex-col leading-none">
-          <span className={`font-display text-xl font-bold tracking-wide ${textColor}`}>
+          <span className={`font-display whitespace-nowrap text-lg font-bold tracking-wide sm:text-xl ${textColor}`}>
             <span className="text-brand">NOVA</span> A-TO-Z PARTS
           </span>
-          <span className={`text-[10px] font-medium uppercase tracking-[0.2em] ${subColor}`}>
+          <span className={`hidden text-[10px] font-medium uppercase tracking-[0.2em] sm:block ${subColor}`}>
             Heavy-Duty Truck &amp; Trailer Parts
           </span>
         </span>

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" role="img" aria-label="Flanged lug nuts">
+<defs>
+  <radialGradient id="bg" cx="50%" cy="38%" r="75%">
+    <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e6e9ee"/>
+  </radialGradient>
+  <linearGradient id="metal" x1="0" x2="1" y1="0" y2="0">
+    <stop offset="0" stop-color="#4a515e"/><stop offset=".35" stop-color="#a3aab6"/>
+    <stop offset=".55" stop-color="#dfe3e9"/><stop offset="1" stop-color="#6b7280"/>
+  </linearGradient>
+  <linearGradient id="metalV" x1="0" x2="0" y1="0" y2="1">
+    <stop offset="0" stop-color="#dfe3e9"/><stop offset=".5" stop-color="#a3aab6"/>
+    <stop offset="1" stop-color="#4a515e"/>
+  </linearGradient>
+  <linearGradient id="dark" x1="0" x2="1" y1="0" y2="0">
+    <stop offset="0" stop-color="#1d2027"/><stop offset=".45" stop-color="#4a515e"/>
+    <stop offset="1" stop-color="#1d2027"/>
+  </linearGradient>
+  <linearGradient id="red" x1="0" x2="1" y1="0" y2="0">
+    <stop offset="0" stop-color="#a8001f"/><stop offset=".45" stop-color="#e4002b"/>
+    <stop offset="1" stop-color="#8e001a"/>
+  </linearGradient>
+  <radialGradient id="amber" cx="40%" cy="35%" r="70%">
+    <stop offset="0" stop-color="#ffe29a"/><stop offset=".6" stop-color="#f5a524"/>
+    <stop offset="1" stop-color="#c77700"/>
+  </radialGradient>
+  <radialGradient id="lens" cx="40%" cy="35%" r="70%">
+    <stop offset="0" stop-color="#ffffff"/><stop offset=".55" stop-color="#cfe6ff"/>
+    <stop offset="1" stop-color="#7d93ad"/>
+  </radialGradient>
+  <radialGradient id="redlens" cx="40%" cy="35%" r="70%">
+    <stop offset="0" stop-color="#ff8a95"/><stop offset=".6" stop-color="#e4002b"/>
+    <stop offset="1" stop-color="#7a0016"/>
+  </radialGradient>
+  <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+    <feGaussianBlur stdDeviation="14"/>
+  </filter>
+</defs>
+<rect width="800" height="800" fill="url(#bg)"/>
+<ellipse cx="400" cy="660" rx="260" ry="34" fill="#000" opacity=".16" filter="url(#soft)"/>
+<circle cx="290" cy="480" r="112.1" fill="#4a515e"/><polygon points="372.3,517.5 290.0,565.0 207.7,517.5 207.7,422.5 290.0,375.0 372.3,422.5" fill="url(#metal)" stroke="#2b303a" stroke-width="4"/><circle cx="290" cy="470" r="39.9" fill="#2b303a"/><circle cx="510" cy="480" r="112.1" fill="#4a515e"/><polygon points="592.3,517.5 510.0,565.0 427.7,517.5 427.7,422.5 510.0,375.0 592.3,422.5" fill="url(#metal)" stroke="#2b303a" stroke-width="4"/><circle cx="510" cy="470" r="39.9" fill="#2b303a"/><circle cx="400" cy="310" r="112.1" fill="#4a515e"/><polygon points="482.3,347.5 400.0,395.0 317.7,347.5 317.7,252.5 400.0,205.0 482.3,252.5" fill="url(#metal)" stroke="#2b303a" stroke-width="4"/><circle cx="400" cy="300" r="39.9" fill="#2b303a"/>
+</svg>

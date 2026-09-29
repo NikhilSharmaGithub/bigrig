@@ -31,7 +31,7 @@ export default async function HomePage() {
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 lg:grid-cols-2 lg:items-center lg:py-20">
           <div>
             <span className="inline-block rounded bg-brand/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-brand-light">
-              4,000+ brands · millions of parts
+              Heavy-duty truck &amp; trailer parts
             </span>
             <h1 className="font-display mt-4 text-4xl font-bold leading-tight sm:text-5xl lg:text-6xl">
               The right part for your rig,
@@ -66,8 +66,8 @@ export default async function HomePage() {
       <section className="border-b border-border bg-surface">
         <div className="mx-auto grid max-w-7xl grid-cols-2 gap-4 px-4 py-6 text-center md:grid-cols-4">
           {[
-            ["Real-Time Inventory", "Live stock from coast to coast"],
-            ["Fitment Verified", "Parts guaranteed to fit your rig"],
+            ["Live Stock Levels", "See what’s in stock on every part"],
+            ["Shop by Truck", "Filter parts by make, model & year"],
             ["30-Day Returns", "Hassle-free, backed by warranty"],
             ["Expert Support", "Parts pros a phone call away"],
           ].map(([title, sub]) => (

@@ -44,7 +44,7 @@ export function Footer() {
             <Logo />
             <p className="mt-4 max-w-xs text-sm text-steel-400">
               Heavy-duty truck &amp; trailer parts for fleets and owner-operators.
-              Millions of parts, real-time inventory, expert support.
+              Live stock levels, fitment by truck, and real people on the phone.
             </p>
             <a
               href={SITE.phoneHref}

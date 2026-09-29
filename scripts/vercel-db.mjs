@@ -56,6 +56,12 @@ function runSeed(flag) {
 console.log("[vercel-db] Seeding catalog (first deploy only)…");
 runSeed("--catalog-only");
 
+// Opt-in, one-off: SEED_DEMO_IMAGES=1 gives image-less demo products their illustration.
+if (process.env.SEED_DEMO_IMAGES === "1") {
+  console.log("[vercel-db] Attaching demo product images…");
+  runSeed("--demo-images");
+}
+
 // Opt-in, one-off: set SEED_DEMO_PRODUCTS=1 for a deploy to fill an empty store.
 if (process.env.SEED_DEMO_PRODUCTS === "1") {
   console.log("[vercel-db] Adding demo products (only if the store has none)…");

@@ -30,7 +30,7 @@ export default function AboutPage() {
       <h2>Why fleets choose us</h2>
       <ul>
         <li>Real-time inventory from coast-to-coast warehouses.</li>
-        <li>Fitment verified by make, model, and year.</li>
+        <li>Fitment listed by make, model, and year.</li>
         <li>30-day hassle-free returns, backed by manufacturer warranties.</li>
         <li>Volume pricing and net terms for fleets through Nova Pro.</li>
         <li>Parts specialists a phone call away.</li>

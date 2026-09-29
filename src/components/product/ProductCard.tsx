@@ -49,10 +49,12 @@ export function ProductCard({ product }: { product: ProductCardItem }) {
         </h3>
         <span className="mt-0.5 text-xs text-steel-500">#{product.partNumber}</span>
 
-        <div className="mt-1 flex items-center gap-1 text-xs text-steel-500">
-          <Stars rating={product.ratingAvg} />
-          <span>({product.ratingCount})</span>
-        </div>
+        {product.ratingCount > 0 && (
+          <div className="mt-1 flex items-center gap-1 text-xs text-steel-500">
+            <Stars rating={product.ratingAvg} />
+            <span>({product.ratingCount})</span>
+          </div>
+        )}
 
         <div className="mt-auto pt-2">
           <div className="flex items-baseline gap-2">

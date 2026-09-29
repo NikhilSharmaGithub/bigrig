@@ -194,13 +194,19 @@ export default async function ProductPage({ params }: Props) {
           <p className="mt-1 text-sm text-steel-500">Part #{product.partNumber}</p>
 
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            <span className="text-accent" aria-label={`${rating} out of 5`}>
-              {"★★★★★".slice(0, Math.round(rating))}
-              <span className="text-steel-300">{"★★★★★".slice(Math.round(rating))}</span>
-            </span>
-            <span className="text-steel-500">
-              {rating.toFixed(1)} · {product.ratingCount} ratings
-            </span>
+            {product.ratingCount > 0 ? (
+              <>
+                <span className="text-accent" aria-label={`${rating} out of 5`}>
+                  {"★★★★★".slice(0, Math.round(rating))}
+                  <span className="text-steel-300">{"★★★★★".slice(Math.round(rating))}</span>
+                </span>
+                <span className="text-steel-500">
+                  {rating.toFixed(1)} · {product.ratingCount} ratings
+                </span>
+              </>
+            ) : (
+              <span className="text-steel-500">No reviews yet</span>
+            )}
             {product.vendor && (
               <span className="text-steel-500">
                 · Sold by{" "}
@@ -273,7 +279,7 @@ export default async function ProductPage({ params }: Props) {
               className="mt-3 rounded-md border border-border px-4 py-2 text-sm font-semibold text-steel-700 hover:border-brand hover:text-brand"
             />
             <ul className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-4 text-xs text-steel-600">
-              <li>✓ Fitment verified</li>
+              <li>✓ Fitment listed by truck</li>
               <li>✓ 30-day returns</li>
               <li>✓ Ships from Dallas, TX</li>
               <li>✓ Expert phone support</li>
