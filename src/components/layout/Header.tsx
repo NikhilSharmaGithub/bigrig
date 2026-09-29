@@ -16,8 +16,8 @@ export function Header() {
             Free shipping over $99 · 30-day hassle-free returns
           </span>
           <div className="flex items-center gap-4">
-            <a href={SITE.phoneHref} className="hover:text-white">
-              {SITE.phone}
+            <a href={`mailto:${SITE.email}`} className="hidden hover:text-white sm:inline">
+              {SITE.email}
             </a>
             <Link href="/sell" className="font-semibold text-accent hover:text-white">
               Sell on Nova

@@ -33,7 +33,7 @@ export default function AboutPage() {
         <li>Fitment listed by make, model, and year.</li>
         <li>30-day hassle-free returns, backed by manufacturer warranties.</li>
         <li>Volume pricing and net terms for fleets through Nova Pro.</li>
-        <li>Parts specialists a phone call away.</li>
+        <li>Parts specialists a quick email away.</li>
       </ul>
 
       <h2>Our promise</h2>

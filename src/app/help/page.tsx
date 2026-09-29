@@ -39,10 +39,11 @@ const FAQS: [string, React.ReactNode][] = [
     </>,
   ],
   [
-    "Can I order by phone?",
+    "How do I reach a parts expert?",
     <>
-      Absolutely. Call our parts experts at{" "}
-      <a href={SITE.phoneHref}>{SITE.phone}</a>.
+      Email our parts team at{" "}
+      <a href={`mailto:${SITE.email}`}>{SITE.email}</a> with your part number or truck
+      details and we&apos;ll get back to you.
     </>,
   ],
 ];

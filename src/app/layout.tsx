@@ -69,7 +69,7 @@ export default function RootLayout({
             url: SITE.url,
             logo: `${SITE.url}/icon.svg`,
             description: SITE.description,
-            telephone: SITE.phone,
+            email: SITE.email,
             address: {
               "@type": "PostalAddress",
               streetAddress: SITE.address.line1,

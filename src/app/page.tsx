@@ -69,7 +69,7 @@ export default async function HomePage() {
             ["Live Stock Levels", "See what’s in stock on every part"],
             ["Shop by Truck", "Filter parts by make, model & year"],
             ["30-Day Returns", "Hassle-free, backed by warranty"],
-            ["Expert Support", "Parts pros a phone call away"],
+            ["Email Support", "Parts questions answered by email"],
           ].map(([title, sub]) => (
             <div key={title}>
               <p className="font-display text-sm font-bold uppercase tracking-wide text-steel-900">

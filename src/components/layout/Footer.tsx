@@ -44,13 +44,13 @@ export function Footer() {
             <Logo />
             <p className="mt-4 max-w-xs text-sm text-steel-400">
               Heavy-duty truck &amp; trailer parts for fleets and owner-operators.
-              Live stock levels, fitment by truck, and real people on the phone.
+              Live stock levels, fitment by truck, and real people answering email.
             </p>
             <a
-              href={SITE.phoneHref}
-              className="mt-4 inline-block font-display text-2xl font-bold text-white"
+              href={`mailto:${SITE.email}`}
+              className="mt-4 inline-block break-all font-display text-lg font-bold text-white hover:text-brand-light"
             >
-              {SITE.phone}
+              {SITE.email}
             </a>
           </div>
           {footerCols.map((col) => (

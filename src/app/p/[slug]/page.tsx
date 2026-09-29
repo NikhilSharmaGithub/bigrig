@@ -282,7 +282,7 @@ export default async function ProductPage({ params }: Props) {
               <li>✓ Fitment listed by truck</li>
               <li>✓ 30-day returns</li>
               <li>✓ Ships from Dallas, TX</li>
-              <li>✓ Expert phone support</li>
+              <li>✓ Email support</li>
             </ul>
           </div>
         </div>

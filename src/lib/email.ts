@@ -49,7 +49,7 @@ function shell(bodyHtml: string): string {
       </div>
       <div style="padding:24px;">${bodyHtml}</div>
       <div style="background:#f5f6f8;padding:16px 24px;font-size:12px;color:#5b616e;border-top:1px solid #e2e5ea;">
-        Questions? Email <a href="mailto:${SITE.email}" style="color:#e4002b;">${SITE.email}</a> or call ${SITE.phone}.
+        Questions? Email <a href="mailto:${SITE.email}" style="color:#e4002b;">${SITE.email}</a>.
       </div>
     </div>
   </div>`;

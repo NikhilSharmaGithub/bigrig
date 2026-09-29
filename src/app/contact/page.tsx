@@ -4,7 +4,7 @@ import { SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Contact Us",
-  description: "Get in touch with the Nova A to Z Parts parts team by phone, email, or message.",
+  description: "Get in touch with the Nova A to Z Parts parts team by email or message.",
 };
 
 export default function ContactPage() {
@@ -24,7 +24,6 @@ export default function ContactPage() {
 
       <div className="mx-auto grid max-w-5xl gap-8 px-4 py-10 lg:grid-cols-[1fr_1.4fr]">
         <div className="space-y-6">
-          <InfoCard label="Call us" value={SITE.phone} href={SITE.phoneHref} />
           <InfoCard
             label="Email"
             value={SITE.email}
