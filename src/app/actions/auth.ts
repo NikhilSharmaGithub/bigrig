@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
@@ -17,6 +17,27 @@ import { sendWelcomeEmail } from "@/lib/email";
 
 export type AuthState = { error?: string };
 
+const UNAVAILABLE =
+  "Sign-in is temporarily unavailable. Please try again in a few minutes.";
+
+/**
+ * Runs an auth action, turning a database/connection failure (e.g. no
+ * DATABASE_URL on a deploy) into a friendly form error instead of the global
+ * error page. Next's redirect()/notFound() signals are re-thrown untouched.
+ */
+async function guarded(
+  name: string,
+  run: () => Promise<AuthState>,
+): Promise<AuthState> {
+  try {
+    return await run();
+  } catch (e) {
+    unstable_rethrow(e);
+    console.error(`${name} failed`, e);
+    return { error: UNAVAILABLE };
+  }
+}
+
 function clean(v: FormDataEntryValue | null): string {
   return String(v ?? "").trim();
 }
@@ -25,6 +46,10 @@ export async function registerAction(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
+  return guarded("registerAction", () => register(formData));
+}
+
+async function register(formData: FormData): Promise<AuthState> {
   const name = clean(formData.get("name"));
   const email = clean(formData.get("email")).toLowerCase();
   const password = String(formData.get("password") ?? "");
@@ -67,6 +92,10 @@ export async function loginAction(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
+  return guarded("loginAction", () => login(formData));
+}
+
+async function login(formData: FormData): Promise<AuthState> {
   const email = clean(formData.get("email")).toLowerCase();
   const password = String(formData.get("password") ?? "");
 
@@ -102,6 +131,10 @@ export async function adminLoginAction(
   _prev: AuthState,
   formData: FormData,
 ): Promise<AuthState> {
+  return guarded("adminLoginAction", () => adminLogin(formData));
+}
+
+async function adminLogin(formData: FormData): Promise<AuthState> {
   const email = clean(formData.get("email")).toLowerCase();
   const password = String(formData.get("password") ?? "");
   const setupCode = clean(formData.get("setupCode"));
