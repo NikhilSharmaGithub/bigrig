@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState } from "react";
 import { adminLoginAction, type AuthState } from "@/app/actions/auth";
 
 export function AdminLoginForm() {
@@ -10,7 +10,16 @@ export function AdminLoginForm() {
   );
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form
+      action={formAction}
+      // manual submit: React's post-action form reset would wipe email/password on an error
+      onSubmit={(e) => {
+        e.preventDefault();
+        const data = new FormData(e.currentTarget);
+        startTransition(() => formAction(data));
+      }}
+      className="space-y-4"
+    >
       <label className="block">
         <span className="mb-1 block text-sm font-medium text-steel-300">
           Admin email
@@ -35,6 +44,18 @@ export function AdminLoginForm() {
           autoComplete="current-password"
           className="w-full rounded-md border border-steel-700 bg-steel-800 px-3 py-2.5 text-sm text-white placeholder:text-steel-500 focus:outline-none focus:ring-2 focus:ring-brand"
           placeholder="••••••••"
+        />
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium text-steel-300">
+          Setup code <span className="font-normal text-steel-500">(first sign-in only)</span>
+        </span>
+        <input
+          name="setupCode"
+          type="password"
+          autoComplete="off"
+          className="w-full rounded-md border border-steel-700 bg-steel-800 px-3 py-2.5 text-sm text-white placeholder:text-steel-500 focus:outline-none focus:ring-2 focus:ring-brand"
+          placeholder="Leave blank if your admin account already exists"
         />
       </label>
 

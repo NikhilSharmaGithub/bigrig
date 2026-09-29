@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
@@ -96,16 +97,26 @@ export function isAdminEmail(email: string): boolean {
 }
 
 /**
- * Is this user an admin? If ADMIN_EMAILS is set, ONLY those emails qualify
- * (the role column is ignored), so a stray `role='admin'` row can't grant
- * access. If the allowlist is empty, fall back to the role check.
+ * Is this user an admin? The admin role is required (it is only granted through
+ * the setup-code flow in adminLoginAction); ADMIN_EMAILS, when set, narrows it
+ * further. The allowlist alone must never grant access, or anyone could
+ * register a not-yet-claimed owner email through /register and walk in.
  */
 export function isUserAdmin(user: Pick<SessionUser, "email" | "role">): boolean {
+  if (user.role !== "admin") return false;
   const allowlist = adminEmailAllowlist();
-  if (allowlist.length > 0) {
-    return allowlist.includes(user.email.toLowerCase());
-  }
-  return user.role === "admin";
+  return allowlist.length === 0 || allowlist.includes(user.email.toLowerCase());
+}
+
+/**
+ * Checks the one-time code needed to create or promote an admin account.
+ * With ADMIN_SETUP_CODE unset, no new admin can be created at all.
+ */
+export function isValidAdminSetupCode(code: string): boolean {
+  const expected = process.env.ADMIN_SETUP_CODE ?? "";
+  if (!expected || !code) return false;
+  const digest = (v: string) => createHash("sha256").update(v).digest();
+  return timingSafeEqual(digest(code), digest(expected));
 }
 
 /** For admin pages: requires the owner (per ADMIN_EMAILS allowlist). */

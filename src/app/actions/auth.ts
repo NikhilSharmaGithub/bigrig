@@ -9,6 +9,7 @@ import {
   destroySession,
   hashPassword,
   isAdminEmail,
+  isValidAdminSetupCode,
   verifyPassword,
 } from "@/lib/auth";
 import { mergeGuestCartIntoUser } from "@/lib/cart";
@@ -33,6 +34,10 @@ export async function registerAction(
   }
   if (password.length < 8) {
     return { error: "Password must be at least 8 characters." };
+  }
+  // Owner emails are claimed only through /admin-login with the setup code.
+  if (isAdminEmail(email)) {
+    return { error: "This email is reserved. Use the admin sign-in page." };
   }
 
   const existing = await db.query.users.findFirst({
@@ -89,8 +94,9 @@ export async function logoutAction(): Promise<void> {
 
 /**
  * Admin entrance. Only emails on the ADMIN_EMAILS allowlist may proceed.
- * First time the owner signs in (no account yet), this creates their admin
- * account with the password they enter — so nobody else can ever get in.
+ * An existing admin signs in with email + password. Creating the admin account
+ * (first sign-in) or promoting an existing account also needs ADMIN_SETUP_CODE,
+ * so knowing the owner's email is never enough.
  */
 export async function adminLoginAction(
   _prev: AuthState,
@@ -98,6 +104,7 @@ export async function adminLoginAction(
 ): Promise<AuthState> {
   const email = clean(formData.get("email")).toLowerCase();
   const password = String(formData.get("password") ?? "");
+  const setupCode = clean(formData.get("setupCode"));
 
   if (!email || !password) {
     return { error: "Email and password are required." };
@@ -119,6 +126,9 @@ export async function adminLoginAction(
       return { error: "Invalid email or password." };
     }
     if (existing.role !== "admin") {
+      if (!isValidAdminSetupCode(setupCode)) {
+        return { error: "Enter the admin setup code to activate admin access for this account." };
+      }
       await db
         .update(users)
         .set({ role: "admin" })
@@ -126,6 +136,13 @@ export async function adminLoginAction(
     }
     await createSession(existing.id);
   } else {
+    if (!isValidAdminSetupCode(setupCode)) {
+      return {
+        error: process.env.ADMIN_SETUP_CODE
+          ? "First-time sign-in needs the admin setup code."
+          : "Admin setup is disabled: ADMIN_SETUP_CODE is not configured on this server.",
+      };
+    }
     if (password.length < 8) {
       return { error: "Choose a password with at least 8 characters." };
     }
