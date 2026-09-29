@@ -10,8 +10,21 @@ const globalForDb = globalThis as unknown as {
   db?: DrizzleDb;
 };
 
+/**
+ * DATABASE_URL wins; otherwise POSTGRES_URL, which the Supabase ↔ Vercel
+ * integration syncs into the project. That URL carries `supa=base-pooler.x`,
+ * which postgres-js would forward to the server as a startup parameter.
+ */
+function connectionUrl(): string | undefined {
+  const raw = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!raw) return undefined;
+  const url = new URL(raw);
+  url.searchParams.delete("supa");
+  return url.toString();
+}
+
 function createDb(): DrizzleDb {
-  const connectionString = process.env.DATABASE_URL;
+  const connectionString = connectionUrl();
   if (!connectionString) {
     throw new Error(
       "DATABASE_URL is not set. Add it to .env.local (see .env.example).",

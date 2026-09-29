@@ -1,7 +1,7 @@
 import { config } from "dotenv";
 config({ path: ".env.local" });
 config();
-import { sql } from "drizzle-orm";
+import { count, sql } from "drizzle-orm";
 import { db } from "./index";
 import * as s from "./schema";
 import { categories as catalogCategories, topBrands } from "../lib/catalog";
@@ -116,14 +116,26 @@ const productData: SeedProduct[] = [
 /*  Seed                                                                        */
 /* -------------------------------------------------------------------------- */
 
+// --catalog-only: brands, categories and vehicles for a live store, no demo products.
+// It never truncates, and does nothing if categories already exist.
+const catalogOnly = process.argv.includes("--catalog-only");
+
 async function main() {
-  console.log("⏳ Resetting catalog tables…");
-  await db.execute(sql`
-    TRUNCATE TABLE
-      product_fitment, product_specs, product_images, inventory,
-      cart_items, order_items, products, vehicles, brands, categories
-    RESTART IDENTITY CASCADE
-  `);
+  if (catalogOnly) {
+    const [{ n }] = await db.select({ n: count() }).from(s.categories);
+    if (n > 0) {
+      console.log(`✓ Catalog already has ${n} categories — nothing to do.`);
+      return;
+    }
+  } else {
+    console.log("⏳ Resetting catalog tables…");
+    await db.execute(sql`
+      TRUNCATE TABLE
+        product_fitment, product_specs, product_images, inventory,
+        cart_items, order_items, products, vehicles, brands, categories
+      RESTART IDENTITY CASCADE
+    `);
+  }
 
   // Brands
   console.log("⏳ Seeding brands…");
@@ -187,6 +199,13 @@ async function main() {
     const list = vehiclesByMake.get(v.make) ?? [];
     list.push(v.id);
     vehiclesByMake.set(v.make, list);
+  }
+
+  if (catalogOnly) {
+    console.log(
+      `✓ Catalog seeded: ${brandRows.length} brands, ${parentRows.length + childRows.length} categories, ${vehicleRows.length} vehicles.`,
+    );
+    return;
   }
 
   // Products + dependents
