@@ -116,11 +116,98 @@ const productData: SeedProduct[] = [
 /*  Seed                                                                        */
 /* -------------------------------------------------------------------------- */
 
+async function insertProducts(
+  brandId: Map<string, string>,
+  categoryId: Map<string, string>,
+  vehiclesByMake: Map<string, string[]>,
+) {
+  // Products + dependents
+  console.log(`⏳ Seeding ${productData.length} products…`);
+  const productRows = await db
+    .insert(s.products)
+    .values(
+      productData.map((p) => ({
+        slug: p.slug,
+        name: p.name,
+        partNumber: p.partNumber,
+        brandId: brandId.get(p.brand) ?? null,
+        categoryId: categoryId.get(p.category) ?? null,
+        description: p.desc,
+        priceCents: Math.round(p.price * 100),
+        listPriceCents: p.list ? Math.round(p.list * 100) : null,
+        ratingAvg: p.rating.toFixed(1),
+        ratingCount: p.reviews,
+      })),
+    )
+    .returning({ id: s.products.id, slug: s.products.slug });
+  const productId = new Map(productRows.map((p) => [p.slug, p.id]));
+
+  // Specs
+  const specValues = productData.flatMap((p) =>
+    p.specs.map(([name, value], i) => ({
+      productId: productId.get(p.slug)!,
+      name,
+      value,
+      position: i,
+    })),
+  );
+  await db.insert(s.productSpecs).values(specValues);
+
+  // Inventory
+  await db.insert(s.inventory).values(
+    productData.map((p) => ({
+      productId: productId.get(p.slug)!,
+      quantity: p.qty,
+      warehouse: "Dallas, TX",
+    })),
+  );
+
+  // Fitment
+  const fitmentValues = productData.flatMap((p) =>
+    p.fits.flatMap((make) =>
+      (vehiclesByMake.get(make) ?? []).map((vehicleId) => ({
+        productId: productId.get(p.slug)!,
+        vehicleId,
+      })),
+    ),
+  );
+  await db.insert(s.productFitment).values(fitmentValues);
+  return { productRows, specValues, fitmentValues };
+}
+
 // --catalog-only: brands, categories and vehicles for a live store, no demo products.
 // It never truncates, and does nothing if categories already exist.
 const catalogOnly = process.argv.includes("--catalog-only");
+// --demo-products: the sample products for a live store whose catalog is already
+// seeded. Never truncates; does nothing if any product exists.
+const demoProducts = process.argv.includes("--demo-products");
 
 async function main() {
+  if (demoProducts) {
+    const [{ n }] = await db.select({ n: count() }).from(s.products);
+    if (n > 0) {
+      console.log(`✓ Store already has ${n} products — no demo products added.`);
+      return;
+    }
+    const brands = await db.select({ id: s.brands.id, slug: s.brands.slug }).from(s.brands);
+    const cats = await db.select({ id: s.categories.id, slug: s.categories.slug }).from(s.categories);
+    const vehicles = await db.select({ id: s.vehicles.id, make: s.vehicles.make }).from(s.vehicles);
+    if (cats.length === 0) {
+      throw new Error("No categories yet — run the catalog seed first.");
+    }
+    const byMake = new Map<string, string[]>();
+    for (const v of vehicles) byMake.set(v.make, [...(byMake.get(v.make) ?? []), v.id]);
+    const { productRows, specValues, fitmentValues } = await insertProducts(
+      new Map(brands.map((b) => [b.slug, b.id])),
+      new Map(cats.map((c) => [c.slug, c.id])),
+      byMake,
+    );
+    console.log(
+      `✓ Demo products added: ${productRows.length} products, ${specValues.length} specs, ${fitmentValues.length} fitment links.`,
+    );
+    return;
+  }
+
   if (catalogOnly) {
     const [{ n }] = await db.select({ n: count() }).from(s.categories);
     if (n > 0) {
@@ -208,57 +295,11 @@ async function main() {
     return;
   }
 
-  // Products + dependents
-  console.log(`⏳ Seeding ${productData.length} products…`);
-  const productRows = await db
-    .insert(s.products)
-    .values(
-      productData.map((p) => ({
-        slug: p.slug,
-        name: p.name,
-        partNumber: p.partNumber,
-        brandId: brandId.get(p.brand) ?? null,
-        categoryId: categoryId.get(p.category) ?? null,
-        description: p.desc,
-        priceCents: Math.round(p.price * 100),
-        listPriceCents: p.list ? Math.round(p.list * 100) : null,
-        ratingAvg: p.rating.toFixed(1),
-        ratingCount: p.reviews,
-      })),
-    )
-    .returning({ id: s.products.id, slug: s.products.slug });
-  const productId = new Map(productRows.map((p) => [p.slug, p.id]));
-
-  // Specs
-  const specValues = productData.flatMap((p) =>
-    p.specs.map(([name, value], i) => ({
-      productId: productId.get(p.slug)!,
-      name,
-      value,
-      position: i,
-    })),
+  const { productRows, specValues, fitmentValues } = await insertProducts(
+    brandId,
+    categoryId,
+    vehiclesByMake,
   );
-  await db.insert(s.productSpecs).values(specValues);
-
-  // Inventory
-  await db.insert(s.inventory).values(
-    productData.map((p) => ({
-      productId: productId.get(p.slug)!,
-      quantity: p.qty,
-      warehouse: "Dallas, TX",
-    })),
-  );
-
-  // Fitment
-  const fitmentValues = productData.flatMap((p) =>
-    p.fits.flatMap((make) =>
-      (vehiclesByMake.get(make) ?? []).map((vehicleId) => ({
-        productId: productId.get(p.slug)!,
-        vehicleId,
-      })),
-    ),
-  );
-  await db.insert(s.productFitment).values(fitmentValues);
 
   console.log("✅ Seed complete:");
   console.log(`   ${brandRows.length} brands`);

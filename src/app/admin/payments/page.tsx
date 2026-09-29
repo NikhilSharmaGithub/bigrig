@@ -8,6 +8,7 @@ import {
   getStripeBalance,
 } from "@/lib/payments";
 import { formatPrice } from "@/lib/format";
+import { StripeSetupCard } from "@/components/admin/StripeSetupCard";
 
 export const metadata: Metadata = { title: "Admin · Payments" };
 
@@ -35,6 +36,8 @@ export default async function AdminPaymentsPage() {
       <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-steel-900">
         Payments &amp; Sales
       </h1>
+
+      <StripeSetupCard />
 
       {/* KPI cards */}
       <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">

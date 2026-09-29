@@ -123,8 +123,21 @@ async function fulfillOrder(session: Stripe.Checkout.Session) {
 
   // Pay out each connected vendor their share (best-effort — never blocks).
   try {
-    await transferOrderPayouts(orderId);
+    await transferOrderPayouts(orderId, await chargeIdFor(session));
   } catch {
     // Payout failures are recorded per-vendor; don't fail the webhook.
+  }
+}
+
+async function chargeIdFor(
+  session: Stripe.Checkout.Session,
+): Promise<string | undefined> {
+  if (typeof session.payment_intent !== "string") return undefined;
+  try {
+    const pi = await getStripe().paymentIntents.retrieve(session.payment_intent);
+    const charge = pi.latest_charge;
+    return typeof charge === "string" ? charge : charge?.id;
+  } catch {
+    return undefined;
   }
 }

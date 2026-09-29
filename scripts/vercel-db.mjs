@@ -45,9 +45,19 @@ try {
   await client.end();
 }
 
+function runSeed(flag) {
+  const r = spawnSync("npx", ["tsx", "src/db/seed.ts", flag], {
+    stdio: "inherit",
+    env: { ...process.env, DATABASE_URL: connectionString },
+  });
+  if (r.status !== 0) process.exit(r.status ?? 1);
+}
+
 console.log("[vercel-db] Seeding catalog (first deploy only)…");
-const seed = spawnSync("npx", ["tsx", "src/db/seed.ts", "--catalog-only"], {
-  stdio: "inherit",
-  env: { ...process.env, DATABASE_URL: connectionString },
-});
-process.exit(seed.status ?? 1);
+runSeed("--catalog-only");
+
+// Opt-in, one-off: set SEED_DEMO_PRODUCTS=1 for a deploy to fill an empty store.
+if (process.env.SEED_DEMO_PRODUCTS === "1") {
+  console.log("[vercel-db] Adding demo products (only if the store has none)…");
+  runSeed("--demo-products");
+}

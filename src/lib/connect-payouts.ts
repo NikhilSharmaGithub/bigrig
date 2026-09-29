@@ -9,8 +9,15 @@ import { commissionFor, getCommissionBps } from "@/lib/settings";
  * After an order is paid, transfer each connected vendor's earnings
  * (their sales minus platform commission) to their Stripe Connect account,
  * and record a payout row. No-op if Stripe isn't configured. Never throws.
+ *
+ * Pass the order's charge id: a transfer tied to it (source_transaction) goes
+ * through while the charge's funds are still pending, which they always are
+ * right after checkout; without it Stripe rejects it for insufficient funds.
  */
-export async function transferOrderPayouts(orderId: string): Promise<void> {
+export async function transferOrderPayouts(
+  orderId: string,
+  sourceChargeId?: string,
+): Promise<void> {
   if (!isStripeConfigured()) return;
 
   let bps: number;
@@ -40,12 +47,17 @@ export async function transferOrderPayouts(orderId: string): Promise<void> {
     if (earned <= 0) continue;
 
     try {
-      const transfer = await stripe.transfers.create({
-        amount: earned,
-        currency: "usd",
-        destination: l.stripeAccountId,
-        transfer_group: orderId,
-      });
+      const transfer = await stripe.transfers.create(
+        {
+          amount: earned,
+          currency: "usd",
+          destination: l.stripeAccountId,
+          transfer_group: orderId,
+          ...(sourceChargeId ? { source_transaction: sourceChargeId } : {}),
+        },
+        // a retried webhook must not pay the same vendor twice for one order
+        { idempotencyKey: `payout-${orderId}-${l.vendorId}` },
+      );
       await db.insert(vendorPayouts).values({
         vendorId: l.vendorId,
         amountCents: earned,
