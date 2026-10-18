@@ -5,6 +5,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { brands, cartItems, carts, inventory, products } from "@/db/schema";
 import { getSession } from "@/lib/auth";
+import { primaryImageSql } from "@/lib/queries";
 
 const CART_COOKIE = "brc_cart";
 const SIXTY_DAYS = 60 * 60 * 24 * 60;
@@ -21,6 +22,7 @@ export type CartLine = {
   quantity: number;
   lineTotalCents: number;
   inStock: boolean;
+  imageUrl: string | null;
 };
 
 export type CartView = {
@@ -93,6 +95,7 @@ export async function getCart(): Promise<CartView> {
       priceCents: products.priceCents,
       quantity: cartItems.quantity,
       qtyOnHand: inventory.quantity,
+      imageUrl: primaryImageSql,
     })
     .from(cartItems)
     .innerJoin(products, eq(cartItems.productId, products.id))
@@ -111,6 +114,7 @@ export async function getCart(): Promise<CartView> {
     quantity: r.quantity,
     lineTotalCents: r.priceCents * r.quantity,
     inStock: (r.qtyOnHand ?? 0) > 0,
+    imageUrl: r.imageUrl,
   }));
 
   return {

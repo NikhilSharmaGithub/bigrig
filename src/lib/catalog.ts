@@ -32,6 +32,7 @@ export const categories: Category[] = [
       { slug: "brake-shoes", name: "Brake Shoes & Drums" },
       { slug: "air-brakes", name: "Air Brake Valves" },
       { slug: "leaf-springs", name: "Leaf Springs" },
+      { slug: "air-springs", name: "Air Springs" },
       { slug: "shocks", name: "Shock Absorbers" },
       { slug: "steering", name: "Steering Components" },
     ],
@@ -89,7 +90,7 @@ export const categories: Category[] = [
     subcategories: [
       { slug: "mirrors", name: "Mirrors" },
       { slug: "fenders", name: "Fenders & Bumpers" },
-      { slug: "doors", name: "Doors & Hardware" },
+      { slug: "doors", name: "Cab Doors & Hardware" },
       { slug: "seats", name: "Seats" },
       { slug: "glass", name: "Glass & Wipers" },
     ],
@@ -100,7 +101,7 @@ export const categories: Category[] = [
     blurb: "Landing gear, doors, suspension, ramps",
     subcategories: [
       { slug: "landing-gear", name: "Landing Gear" },
-      { slug: "trailer-doors", name: "Doors & Hardware" },
+      { slug: "trailer-doors", name: "Trailer Doors & Hardware" },
       { slug: "trailer-suspension", name: "Trailer Suspension" },
       { slug: "couplers", name: "Couplers & Hitches" },
     ],

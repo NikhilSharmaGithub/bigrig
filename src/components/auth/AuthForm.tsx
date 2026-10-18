@@ -8,7 +8,7 @@ import {
   type AuthState,
 } from "@/app/actions/auth";
 
-export function AuthForm({ mode }: { mode: "login" | "register" }) {
+export function AuthForm({ mode, next }: { mode: "login" | "register"; next?: string | null }) {
   const action = mode === "login" ? loginAction : registerAction;
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
     action,
@@ -17,6 +17,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
   return (
     <form action={formAction} className="space-y-4">
+      {next && <input type="hidden" name="next" value={next} />}
       {mode === "register" && (
         <Field label="Full name">
           <input
@@ -73,14 +74,20 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
         {mode === "login" ? (
           <>
             New to Nova?{" "}
-            <Link href="/register" className="font-semibold text-brand hover:underline">
+            <Link
+              href={next ? `/register?next=${encodeURIComponent(next)}` : "/register"}
+              className="font-semibold text-brand hover:underline"
+            >
               Create an account
             </Link>
           </>
         ) : (
           <>
             Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-brand hover:underline">
+            <Link
+              href={next ? `/login?next=${encodeURIComponent(next)}` : "/login"}
+              className="font-semibold text-brand hover:underline"
+            >
               Sign in
             </Link>
           </>

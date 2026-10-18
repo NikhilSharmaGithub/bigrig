@@ -13,6 +13,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { mergeGuestCartIntoUser } from "@/lib/cart";
+import { safeNextPath } from "@/lib/next-path";
 import { sendWelcomeEmail } from "@/lib/email";
 
 export type AuthState = { error?: string };
@@ -85,7 +86,7 @@ async function register(formData: FormData): Promise<AuthState> {
   await createSession(user.id);
   await mergeGuestCartIntoUser(user.id);
   void sendWelcomeEmail(email, name || null);
-  redirect("/account");
+  redirect(safeNextPath(formData.get("next")) ?? "/account");
 }
 
 export async function loginAction(
@@ -113,7 +114,7 @@ async function login(formData: FormData): Promise<AuthState> {
 
   await createSession(user.id);
   await mergeGuestCartIntoUser(user.id);
-  redirect("/account");
+  redirect(safeNextPath(formData.get("next")) ?? "/account");
 }
 
 export async function logoutAction(): Promise<void> {

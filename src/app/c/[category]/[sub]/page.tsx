@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { CatalogView } from "@/components/catalog/CatalogView";
 import {
@@ -6,7 +6,8 @@ import {
   parseListOpts,
   type RawSearchParams,
 } from "@/lib/catalog-params";
-import { getCategoryBySlug, listProducts } from "@/lib/queries";
+import { SubcategoryChips } from "@/components/catalog/SubcategoryChips";
+import { getCategoryBySlug, getNavCategories, listProducts } from "@/lib/queries";
 
 type Props = {
   params: Promise<{ category: string; sub: string }>;
@@ -23,6 +24,9 @@ export default async function SubcategoryPage({ params, searchParams }: Props) {
   const { category, sub } = await params;
   const subCat = await getCategoryBySlug(sub);
   if (!subCat) notFound();
+  if (subCat.parent && subCat.parent.slug !== category) {
+    redirect(`/c/${subCat.parent.slug}/${sub}`);
+  }
 
   const parentName = subCat.parent?.name ?? category;
   const sp = flattenParams(await searchParams);
@@ -39,6 +43,13 @@ export default async function SubcategoryPage({ params, searchParams }: Props) {
       result={result}
       searchParams={sp}
       basePath={`/c/${category}/${sub}`}
+      subnav={
+        <SubcategoryChips
+          parentSlug={category}
+          subcategories={(await getNavCategories()).find((c) => c.slug === category)?.subcategories ?? []}
+          activeSlug={sub}
+        />
+      }
     />
   );
 }

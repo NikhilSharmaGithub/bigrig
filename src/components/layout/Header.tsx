@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
-import { categories } from "@/lib/catalog";
+import { CategoryNav } from "@/components/layout/CategoryNav";
+import { getNavCategories } from "@/lib/queries";
 import { SearchBar } from "@/components/layout/SearchBar";
 import { CartBadge } from "@/components/cart/CartBadge";
 import { WishlistNavLink } from "@/components/wishlist/WishlistNavLink";
 import { SITE } from "@/lib/site";
 
-export function Header() {
+export async function Header() {
+  const navCategories = await getNavCategories();
   return (
     <header className="sticky top-0 z-50 w-full">
       {/* Top utility bar */}
@@ -64,35 +66,7 @@ export function Header() {
         </div>
       </div>
 
-      {/* Category nav */}
-      <nav className="relative bg-steel-800 text-white shadow-md">
-        {/* fade hints that the category row scrolls sideways when it doesn't fit */}
-        <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-steel-800 to-transparent" />
-        <div className="mx-auto flex max-w-7xl items-stretch gap-0 overflow-x-auto px-2 pr-8">
-          {categories.map((cat) => (
-            <div key={cat.slug} className="group relative">
-              <Link
-                href={`/c/${cat.slug}`}
-                className="flex h-full items-center whitespace-nowrap px-3 py-3 text-sm font-medium text-steel-200 transition-colors hover:bg-brand hover:text-white"
-              >
-                {cat.name}
-              </Link>
-              {/* Dropdown */}
-              <div className="invisible absolute left-0 top-full z-50 w-64 translate-y-1 rounded-b-lg border border-border bg-white p-2 opacity-0 shadow-xl transition-all group-hover:visible group-hover:translate-y-0 group-hover:opacity-100">
-                {cat.subcategories.map((sub) => (
-                  <Link
-                    key={sub.slug}
-                    href={`/c/${cat.slug}/${sub.slug}`}
-                    className="block rounded px-3 py-2 text-sm text-steel-700 hover:bg-steel-50 hover:text-brand"
-                  >
-                    {sub.name}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </nav>
+      <CategoryNav categories={navCategories} />
     </header>
   );
 }

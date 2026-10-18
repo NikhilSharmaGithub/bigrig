@@ -121,3 +121,57 @@ export async function sendOrderStatusEmail(
     html: shell(body),
   });
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Quotes                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** Confirmation to the shopper (with their code) and a heads-up to the store. */
+export async function sendQuoteRequestedEmails(q: {
+  code: string;
+  email: string;
+  name: string | null;
+  itemCount: number;
+  listTotalCents: number;
+  note: string | null;
+}) {
+  const link = `${SITE.url}/quote/${q.code}`;
+  await sendEmail({
+    to: q.email,
+    subject: `Your quote request ${q.code}`,
+    html: shell(`
+      <h2 style="margin:0 0 8px;">We've got your quote request</h2>
+      <p>Your quote code is <strong style="font-size:18px;">${q.code}</strong>. Mention it in any message to us.</p>
+      <p>${q.itemCount} part(s), ${formatPrice(q.listTotalCents)} at list price. We'll email you as soon as your price is ready.</p>
+      <p>${button(link, "View your quote")}</p>`),
+  });
+  await sendEmail({
+    to: SITE.email,
+    subject: `New quote request ${q.code}`,
+    html: shell(`
+      <h2 style="margin:0 0 8px;">New quote request ${q.code}</h2>
+      <p>From ${q.name ?? "a customer"} (${q.email}): ${q.itemCount} part(s), ${formatPrice(q.listTotalCents)} at list price.</p>
+      ${q.note ? `<p><em>${q.note.replace(/</g, "&lt;")}</em></p>` : ""}
+      <p>${button(`${SITE.url}/admin/quotes`, "Price it in the admin")}</p>`),
+  });
+}
+
+/** The store's price is ready. */
+export async function sendQuoteReadyEmail(q: {
+  code: string;
+  email: string;
+  quotedTotalCents: number;
+  listTotalCents: number;
+  expiresAt: Date | null;
+}) {
+  const saved = q.listTotalCents - q.quotedTotalCents;
+  await sendEmail({
+    to: q.email,
+    subject: `Your price for quote ${q.code} is ready`,
+    html: shell(`
+      <h2 style="margin:0 0 8px;">Your quote is ready</h2>
+      <p>Quote <strong>${q.code}</strong>: <strong>${formatPrice(q.quotedTotalCents)}</strong>${saved > 0 ? ` (you save ${formatPrice(saved)})` : ""}.</p>
+      ${q.expiresAt ? `<p>This price is good until ${q.expiresAt.toDateString()}.</p>` : ""}
+      <p>${button(`${SITE.url}/quote/${q.code}`, "Review and check out")}</p>`),
+  });
+}

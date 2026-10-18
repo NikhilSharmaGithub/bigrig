@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Breadcrumbs } from "@/components/catalog/Breadcrumbs";
-import { getTopCategories } from "@/lib/queries";
+import { getNavCategories, getTopCategories } from "@/lib/queries";
 
 // DB-backed listing — render at request time, not at build (no DB during build).
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ export const metadata: Metadata = {
 
 export default async function CategoriesIndexPage() {
   const cats = await getTopCategories();
+  const nav = await getNavCategories();
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6">
@@ -50,13 +51,14 @@ export default async function CategoriesIndexPage() {
               <p className="mt-0.5 text-xs text-steel-500">{cat.blurb}</p>
             )}
             <ul className="mt-3 space-y-1.5">
-              {cat.children.map((sub) => (
-                <li key={sub.id}>
+              {(nav.find((n) => n.slug === cat.slug)?.subcategories ?? []).map((sub) => (
+                <li key={sub.slug}>
                   <Link
                     href={`/c/${cat.slug}/${sub.slug}`}
-                    className="text-sm text-steel-600 hover:text-brand"
+                    className="flex justify-between text-sm text-steel-600 hover:text-brand"
                   >
-                    {sub.name}
+                    <span>{sub.name}</span>
+                    <span className="text-xs text-steel-400">{sub.count}</span>
                   </Link>
                 </li>
               ))}

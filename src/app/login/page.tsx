@@ -2,11 +2,17 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { getCurrentUser } from "@/lib/auth";
+import { safeNextPath } from "@/lib/next-path";
 
 export const metadata: Metadata = { title: "Sign In" };
 
-export default async function LoginPage() {
-  if (await getCurrentUser()) redirect("/account");
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const next = safeNextPath((await searchParams).next);
+  if (await getCurrentUser()) redirect(next ?? "/account");
 
   return (
     <div className="mx-auto max-w-md px-4 py-16">
@@ -17,7 +23,7 @@ export default async function LoginPage() {
         Access your orders, returns, and saved vehicles.
       </p>
       <div className="mt-8 rounded-xl border border-border bg-white p-6 shadow-sm">
-        <AuthForm mode="login" />
+        <AuthForm mode="login" next={next} />
       </div>
     </div>
   );

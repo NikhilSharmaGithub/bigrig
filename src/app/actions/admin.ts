@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
   brands,
@@ -22,7 +22,7 @@ import { parseImageUrls, replaceProductImages } from "@/lib/products";
 import { setCommissionBps, updateStoreSettings } from "@/lib/settings";
 import { sendOrderStatusEmail } from "@/lib/email";
 
-export type AdminState = { ok?: boolean; error?: string };
+export type AdminState = { ok?: boolean; error?: string; message?: string };
 
 type OrderStatus = (typeof orders.$inferInsert)["status"];
 type ReturnStatus = (typeof returns.$inferInsert)["status"];
@@ -181,6 +181,40 @@ export async function toggleProductActiveAction(
     .set({ isActive: makeActive, updatedAt: new Date() })
     .where(eq(products.id, id));
   revalidatePath("/admin/products");
+}
+
+/** Inline category change from the admin product list. */
+export async function setProductCategoryAction(
+  productId: string,
+  categoryId: string,
+): Promise<AdminState> {
+  await requireAdmin();
+  await db
+    .update(products)
+    .set({ categoryId: categoryId || null, updatedAt: new Date() })
+    .where(eq(products.id, productId));
+  revalidatePath("/admin/products");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Moves every checked product (form field "ids") into one category. */
+export async function bulkSetCategoryAction(
+  _prev: AdminState,
+  formData: FormData,
+): Promise<AdminState> {
+  await requireAdmin();
+  const ids = formData.getAll("ids").map(String).filter(Boolean);
+  const categoryId = f(formData, "categoryId");
+  if (ids.length === 0) return { error: "Select at least one product." };
+  if (!categoryId) return { error: "Choose a category to move them to." };
+  await db
+    .update(products)
+    .set({ categoryId, updatedAt: new Date() })
+    .where(inArray(products.id, ids));
+  revalidatePath("/admin/products");
+  revalidatePath("/", "layout");
+  return { ok: true, message: `Moved ${ids.length} product${ids.length === 1 ? "" : "s"}.` };
 }
 
 /**

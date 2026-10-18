@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { eq, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import { db } from "@/db";
-import { cartItems, inventory, orders } from "@/db/schema";
+import { cartItems, inventory, orders, quotes } from "@/db/schema";
 import { getStripe } from "@/lib/stripe";
 import type { ShippingAddressSnapshot } from "@/lib/orders";
 import { transferOrderPayouts } from "@/lib/connect-payouts";
@@ -90,6 +90,14 @@ async function fulfillOrder(session: Stripe.Checkout.Session) {
         updatedAt: new Date(),
       })
       .where(eq(inventory.productId, item.productId));
+  }
+
+  // A paid quote is done; its prices can't be used again.
+  if (session.metadata?.quoteId) {
+    await db
+      .update(quotes)
+      .set({ status: "accepted", orderId })
+      .where(eq(quotes.id, session.metadata.quoteId));
   }
 
   // Empty the cart that produced this order.

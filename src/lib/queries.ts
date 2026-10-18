@@ -12,6 +12,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { db } from "@/db";
+import { categories as staticCatalog } from "@/lib/catalog";
 import { alias } from "drizzle-orm/pg-core";
 import {
   brands,
@@ -25,7 +26,7 @@ import {
 } from "@/db/schema";
 
 /** Scalar subquery: the lowest-position image URL for the product row. */
-const primaryImageSql = sql<string | null>`(
+export const primaryImageSql = sql<string | null>`(
   SELECT url FROM ${productImages}
   WHERE ${productImages.productId} = ${products.id}
   ORDER BY ${productImages.position} ASC
@@ -57,6 +58,52 @@ async function safeQuery<T>(
     console.error(`[queries] ${label} failed:`, err);
     return fallback;
   }
+}
+
+export type NavCategory = {
+  slug: string;
+  name: string;
+  /** Only subcategories that have active products, with their counts. */
+  subcategories: { slug: string; name: string; count: number }[];
+};
+
+/**
+ * Categories for navigation (header mega-menu, /c, category chips). Empty
+ * subcategories are left out so shoppers never land on a blank page. Falls back
+ * to the static catalog (all subcategories) when the database is unreachable.
+ */
+export async function getNavCategories(): Promise<NavCategory[]> {
+  return safeQuery(
+    async () => {
+      const rows = await db
+        .select({
+          id: categories.id,
+          slug: categories.slug,
+          name: categories.name,
+          parentId: categories.parentId,
+          count: sql<number>`COUNT(${products.id}) FILTER (WHERE ${products.isActive})::int`,
+        })
+        .from(categories)
+        .leftJoin(products, eq(products.categoryId, categories.id))
+        .groupBy(categories.id)
+        .orderBy(asc(categories.position), asc(categories.name));
+      return rows
+        .filter((r) => !r.parentId)
+        .map((parent) => ({
+          slug: parent.slug,
+          name: parent.name,
+          subcategories: rows
+            .filter((c) => c.parentId === parent.id && c.count > 0)
+            .map((c) => ({ slug: c.slug, name: c.name, count: c.count })),
+        }));
+    },
+    staticCatalog.map((c) => ({
+      slug: c.slug,
+      name: c.name,
+      subcategories: c.subcategories.map((s) => ({ ...s, count: 0 })),
+    })),
+    "getNavCategories",
+  );
 }
 
 export async function getTopCategories() {

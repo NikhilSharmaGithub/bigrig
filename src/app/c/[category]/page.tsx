@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { CatalogView } from "@/components/catalog/CatalogView";
@@ -7,7 +6,8 @@ import {
   parseListOpts,
   type RawSearchParams,
 } from "@/lib/catalog-params";
-import { getCategoryBySlug, listProducts } from "@/lib/queries";
+import { SubcategoryChips } from "@/components/catalog/SubcategoryChips";
+import { getCategoryBySlug, getNavCategories, listProducts } from "@/lib/queries";
 
 type Props = {
   params: Promise<{ category: string }>;
@@ -34,20 +34,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
     parseListOpts(sp, { categorySlug: category }),
   );
 
-  const subnav =
-    cat.children.length > 0 ? (
-      <div className="mt-4 flex flex-wrap gap-2">
-        {cat.children.map((sub) => (
-          <Link
-            key={sub.id}
-            href={`/c/${cat.slug}/${sub.slug}`}
-            className="rounded-full border border-border bg-white px-3.5 py-1.5 text-sm font-medium text-steel-700 transition-colors hover:border-brand hover:text-brand"
-          >
-            {sub.name}
-          </Link>
-        ))}
-      </div>
-    ) : null;
+  const nav = await getNavCategories();
+  const subnav = (
+    <SubcategoryChips
+      parentSlug={cat.slug}
+      subcategories={nav.find((c) => c.slug === cat.slug)?.subcategories ?? []}
+    />
+  );
 
   return (
     <CatalogView

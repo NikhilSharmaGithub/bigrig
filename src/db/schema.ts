@@ -721,3 +721,127 @@ export const returnsRelations = relations(returns, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+/* -------------------------------------------------------------------------- */
+/*  Shopping lists (e.g. "Buy Now", "Buy Later", or the customer's own)        */
+/* -------------------------------------------------------------------------- */
+
+export const shoppingLists = pgTable(
+  "shopping_lists",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("shopping_lists_user_idx").on(t.userId)],
+);
+
+export const shoppingListItems = pgTable(
+  "shopping_list_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    listId: uuid("list_id")
+      .notNull()
+      .references(() => shoppingLists.id, { onDelete: "cascade" }),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    quantity: integer("quantity").notNull().default(1),
+    addedAt: timestamp("added_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [unique("shopping_list_items_list_product").on(t.listId, t.productId)],
+);
+
+/* -------------------------------------------------------------------------- */
+/*  Quotes: a customer's cart, shared by code, priced by the store             */
+/* -------------------------------------------------------------------------- */
+
+export const quoteStatus = pgEnum("quote_status", [
+  "requested",
+  "quoted",
+  "accepted",
+  "cancelled",
+]);
+
+export const quotes = pgTable(
+  "quotes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    code: text("code").notNull().unique(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    name: text("name"),
+    email: text("email").notNull(),
+    note: text("note"),
+    status: quoteStatus("status").notNull().default("requested"),
+    /** Sum of list prices when the quote was requested. */
+    listTotalCents: integer("list_total_cents").notNull(),
+    /** Sum of the store's quoted prices; null until quoted. */
+    quotedTotalCents: integer("quoted_total_cents"),
+    adminNote: text("admin_note"),
+    quotedAt: timestamp("quoted_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
+    orderId: uuid("order_id").references(() => orders.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [index("quotes_status_idx").on(t.status)],
+);
+
+export const quoteItems = pgTable(
+  "quote_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    quoteId: uuid("quote_id")
+      .notNull()
+      .references(() => quotes.id, { onDelete: "cascade" }),
+    productId: uuid("product_id").references(() => products.id, {
+      onDelete: "set null",
+    }),
+    // Snapshots so the quote survives product edits/deletes.
+    name: text("name").notNull(),
+    partNumber: text("part_number").notNull(),
+    quantity: integer("quantity").notNull(),
+    unitPriceCents: integer("unit_price_cents").notNull(),
+    quotedUnitCents: integer("quoted_unit_cents"),
+  },
+  (t) => [index("quote_items_quote_idx").on(t.quoteId)],
+);
+
+export const shoppingListsRelations = relations(shoppingLists, ({ one, many }) => ({
+  user: one(users, { fields: [shoppingLists.userId], references: [users.id] }),
+  items: many(shoppingListItems),
+}));
+
+export const shoppingListItemsRelations = relations(shoppingListItems, ({ one }) => ({
+  list: one(shoppingLists, {
+    fields: [shoppingListItems.listId],
+    references: [shoppingLists.id],
+  }),
+  product: one(products, {
+    fields: [shoppingListItems.productId],
+    references: [products.id],
+  }),
+}));
+
+export const quotesRelations = relations(quotes, ({ one, many }) => ({
+  user: one(users, { fields: [quotes.userId], references: [users.id] }),
+  order: one(orders, { fields: [quotes.orderId], references: [orders.id] }),
+  items: many(quoteItems),
+}));
+
+export const quoteItemsRelations = relations(quoteItems, ({ one }) => ({
+  quote: one(quotes, { fields: [quoteItems.quoteId], references: [quotes.id] }),
+  product: one(products, {
+    fields: [quoteItems.productId],
+    references: [products.id],
+  }),
+}));

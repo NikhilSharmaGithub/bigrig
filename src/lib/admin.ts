@@ -53,10 +53,13 @@ export async function getAdminProducts() {
       priceCents: products.priceCents,
       isActive: products.isActive,
       brandName: brands.name,
+      categoryId: products.categoryId,
+      categoryName: categories.name,
       qty: inventory.quantity,
     })
     .from(products)
     .leftJoin(brands, eq(products.brandId, brands.id))
+    .leftJoin(categories, eq(products.categoryId, categories.id))
     .leftJoin(inventory, eq(inventory.productId, products.id))
     .orderBy(desc(products.createdAt));
 }
@@ -87,7 +90,8 @@ export async function getSelectableCategories() {
     .map((c) => ({
       id: c.id,
       label: `${nameById.get(c.parentId!) ?? ""} › ${c.name}`,
-    }));
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 }
 
 export async function getAdminOrders() {

@@ -8,6 +8,7 @@ import { AddToCart } from "@/components/product/AddToCart";
 import { ProductReviews } from "@/components/product/ProductReviews";
 import { ProductQA } from "@/components/product/ProductQA";
 import { WishlistHeart } from "@/components/wishlist/WishlistHeart";
+import { AddToListButton } from "@/components/lists/AddToListButton";
 import { RecentlyViewed } from "@/components/product/RecentlyViewed";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { discountPct, formatPrice } from "@/lib/format";
@@ -278,6 +279,7 @@ export default async function ProductPage({ params }: Props) {
               label
               className="mt-3 rounded-md border border-border px-4 py-2 text-sm font-semibold text-steel-700 hover:border-brand hover:text-brand"
             />
+            <AddToListButton slug={product.slug} />
             <ul className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-4 text-xs text-steel-600">
               <li>✓ Fitment listed by truck</li>
               <li>✓ 30-day returns</li>

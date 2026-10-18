@@ -29,6 +29,20 @@
       "when": 1790721527857,
       "tag": "0003_clear_seeded_ratings",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792281464777,
+      "tag": "0004_lists_and_quotes",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792281502492,
+      "tag": "0005_category_cleanup",
+      "breakpoints": true
     }
   ]
 }

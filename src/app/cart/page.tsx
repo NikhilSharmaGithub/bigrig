@@ -3,6 +3,9 @@ import type { Metadata } from "next";
 import { CartLineControls } from "@/components/cart/CartLineControls";
 import { CheckoutButton } from "@/components/cart/CheckoutButton";
 import { CouponForm } from "@/components/cart/CouponForm";
+import { SaveForLaterButton } from "@/components/lists/SaveForLaterButton";
+import { RequestQuoteForm } from "@/components/quotes/RequestQuoteForm";
+import { getCurrentUser } from "@/lib/auth";
 import { getCart } from "@/lib/cart";
 import { getAppliedCouponCode, getCartDiscount } from "@/lib/coupons";
 import { getStoreSettings, shippingFor, taxFor } from "@/lib/settings";
@@ -14,6 +17,7 @@ export default async function CartPage() {
   const cart = await getCart();
   const discount = await getCartDiscount(cart.subtotalCents);
   const settings = await getStoreSettings();
+  const user = await getCurrentUser();
   const appliedCode =
     discount?.ok ? discount.code : await getAppliedCouponCode();
   const discountCents = discount?.ok ? discount.discountCents : 0;
@@ -57,12 +61,17 @@ export default async function CartPage() {
             <li key={item.productId} className="flex gap-4 p-4">
               <Link
                 href={`/p/${item.slug}`}
-                className="grid h-20 w-20 shrink-0 place-items-center rounded bg-gradient-to-br from-steel-100 to-steel-200 text-steel-400"
+                className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded bg-gradient-to-br from-steel-100 to-steel-200 text-steel-400"
               >
-                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
-                  <circle cx="12" cy="12" r="3" />
-                  <circle cx="12" cy="12" r="9" strokeDasharray="2 2" />
-                </svg>
+                {item.imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.imageUrl} alt="" className="h-full w-full object-contain" />
+                ) : (
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+                    <circle cx="12" cy="12" r="3" />
+                    <circle cx="12" cy="12" r="9" strokeDasharray="2 2" />
+                  </svg>
+                )}
               </Link>
               <div className="flex flex-1 flex-col">
                 <div className="flex justify-between gap-4">
@@ -89,11 +98,12 @@ export default async function CartPage() {
                     {formatPrice(item.lineTotalCents)}
                   </span>
                 </div>
-                <div className="mt-auto pt-3">
+                <div className="mt-auto flex flex-wrap items-center gap-4 pt-3">
                   <CartLineControls
                     productId={item.productId}
                     quantity={item.quantity}
                   />
+                  <SaveForLaterButton productId={item.productId} />
                 </div>
               </div>
             </li>
@@ -158,6 +168,9 @@ export default async function CartPage() {
 
           <div className="mt-4">
             <CheckoutButton />
+          </div>
+          <div className="mt-3">
+            <RequestQuoteForm email={user?.email} name={user?.name} />
           </div>
           <Link
             href="/c"
