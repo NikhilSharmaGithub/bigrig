@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import {
@@ -17,6 +17,7 @@ import {
   vendors,
 } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
+import { NAV_CATEGORIES_TAG } from "@/lib/queries";
 import { slugify } from "@/lib/vendor";
 import { parseImageUrls, replaceProductImages } from "@/lib/products";
 import { setCommissionBps, updateStoreSettings } from "@/lib/settings";
@@ -168,6 +169,7 @@ export async function updateProductAction(
 
   await replaceProductImages(id, parseImageUrls(f(formData, "images")));
   revalidatePath("/admin/products");
+  updateTag(NAV_CATEGORIES_TAG);
   redirect("/admin/products");
 }
 
@@ -181,6 +183,7 @@ export async function toggleProductActiveAction(
     .set({ isActive: makeActive, updatedAt: new Date() })
     .where(eq(products.id, id));
   revalidatePath("/admin/products");
+  updateTag(NAV_CATEGORIES_TAG);
 }
 
 /** Inline category change from the admin product list. */
@@ -194,6 +197,7 @@ export async function setProductCategoryAction(
     .set({ categoryId: categoryId || null, updatedAt: new Date() })
     .where(eq(products.id, productId));
   revalidatePath("/admin/products");
+  updateTag(NAV_CATEGORIES_TAG);
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -213,6 +217,7 @@ export async function bulkSetCategoryAction(
     .set({ categoryId, updatedAt: new Date() })
     .where(inArray(products.id, ids));
   revalidatePath("/admin/products");
+  updateTag(NAV_CATEGORIES_TAG);
   revalidatePath("/", "layout");
   return { ok: true, message: `Moved ${ids.length} product${ids.length === 1 ? "" : "s"}.` };
 }
@@ -225,6 +230,7 @@ export async function deleteProductAction(id: string): Promise<void> {
   await requireAdmin();
   await db.delete(products).where(eq(products.id, id));
   revalidatePath("/admin/products");
+  updateTag(NAV_CATEGORIES_TAG);
   revalidatePath("/", "layout");
 }
 
@@ -533,6 +539,7 @@ export async function importProductsAction(
   }
 
   revalidatePath("/admin/products");
+  updateTag(NAV_CATEGORIES_TAG);
   return {
     summary: `Imported ${created} product${created === 1 ? "" : "s"}.${
       errors.length ? ` Skipped ${errors.length}: ${errors.slice(0, 4).join("; ")}` : ""
@@ -560,6 +567,7 @@ export async function createCategoryAction(
     return { error: "Could not create — is the slug unique?" };
   }
   revalidatePath("/admin/categories");
+  updateTag(NAV_CATEGORIES_TAG);
   return { ok: true };
 }
 
@@ -567,6 +575,7 @@ export async function deleteCategoryAction(id: string): Promise<void> {
   await requireAdmin();
   await db.delete(categories).where(eq(categories.id, id));
   revalidatePath("/admin/categories");
+  updateTag(NAV_CATEGORIES_TAG);
 }
 
 export async function createBrandAction(

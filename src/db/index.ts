@@ -31,7 +31,15 @@ function createDb(): DrizzleDb {
     );
   }
   const client =
-    globalForDb.client ?? postgres(connectionString, { prepare: false });
+    globalForDb.client ??
+    postgres(connectionString, {
+      prepare: false,
+      // Small pool, idle connections released, and a connect timeout so a busy
+      // pooler surfaces as an error (pages fall back) instead of hanging builds.
+      max: 5,
+      idle_timeout: 20,
+      connect_timeout: 10,
+    });
   if (process.env.NODE_ENV !== "production") globalForDb.client = client;
   return drizzle(client, { schema });
 }

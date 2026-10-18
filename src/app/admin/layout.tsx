@@ -2,6 +2,9 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { logoutAction } from "@/app/actions/auth";
 
+// Signed-in only: skip build-time prerendering (it only wastes database connections).
+export const dynamic = "force-dynamic";
+
 const NAV = [
   { href: "/admin", label: "Dashboard" },
   { href: "/admin/payments", label: "Payments" },

@@ -11,6 +11,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
 import { db } from "@/db";
 import { categories as staticCatalog } from "@/lib/catalog";
 import { alias } from "drizzle-orm/pg-core";
@@ -32,11 +33,7 @@ export const primaryImageSql = sql<string | null>`(
   ORDER BY ${productImages.position} ASC
   LIMIT 1
 )`;
-import type {
-  ProductCardItem,
-  ProductListResult,
-  SortKey,
-} from "@/lib/types";
+import type { ProductCardItem, ProductListResult, SortKey } from "@/lib/types";
 
 /* -------------------------------------------------------------------------- */
 /*  Categories                                                                 */
@@ -72,31 +69,44 @@ export type NavCategory = {
  * subcategories are left out so shoppers never land on a blank page. Falls back
  * to the static catalog (all subcategories) when the database is unreachable.
  */
+export const NAV_CATEGORIES_TAG = "nav-categories";
+
+/**
+ * Cached because the header renders on every page: without it a build issues one
+ * query per prerendered page and can exhaust the database pool. Errors are not
+ * cached, so a failed read falls back below and retries next time.
+ */
+const loadNavCategories = unstable_cache(
+  async (): Promise<NavCategory[]> => {
+    const rows = await db
+      .select({
+        id: categories.id,
+        slug: categories.slug,
+        name: categories.name,
+        parentId: categories.parentId,
+        count: sql<number>`COUNT(${products.id}) FILTER (WHERE ${products.isActive})::int`,
+      })
+      .from(categories)
+      .leftJoin(products, eq(products.categoryId, categories.id))
+      .groupBy(categories.id)
+      .orderBy(asc(categories.position), asc(categories.name));
+    return rows
+      .filter((r) => !r.parentId)
+      .map((parent) => ({
+        slug: parent.slug,
+        name: parent.name,
+        subcategories: rows
+          .filter((c) => c.parentId === parent.id && c.count > 0)
+          .map((c) => ({ slug: c.slug, name: c.name, count: c.count })),
+      }));
+  },
+  ["nav-categories"],
+  { revalidate: 300, tags: [NAV_CATEGORIES_TAG] },
+);
+
 export async function getNavCategories(): Promise<NavCategory[]> {
   return safeQuery(
-    async () => {
-      const rows = await db
-        .select({
-          id: categories.id,
-          slug: categories.slug,
-          name: categories.name,
-          parentId: categories.parentId,
-          count: sql<number>`COUNT(${products.id}) FILTER (WHERE ${products.isActive})::int`,
-        })
-        .from(categories)
-        .leftJoin(products, eq(products.categoryId, categories.id))
-        .groupBy(categories.id)
-        .orderBy(asc(categories.position), asc(categories.name));
-      return rows
-        .filter((r) => !r.parentId)
-        .map((parent) => ({
-          slug: parent.slug,
-          name: parent.name,
-          subcategories: rows
-            .filter((c) => c.parentId === parent.id && c.count > 0)
-            .map((c) => ({ slug: c.slug, name: c.name, count: c.count })),
-        }));
-    },
+    loadNavCategories,
     staticCatalog.map((c) => ({
       slug: c.slug,
       name: c.name,
@@ -188,97 +198,97 @@ export async function listProducts(opts: ListOpts): Promise<ProductListResult> {
   const pageSize = opts.pageSize ?? 24;
 
   try {
-  // Conditions that apply to BOTH results and brand facets (everything but brand).
-  const baseConds = [eq(products.isActive, true)];
+    // Conditions that apply to BOTH results and brand facets (everything but brand).
+    const baseConds = [eq(products.isActive, true)];
 
-  if (opts.categorySlug) {
-    const ids = await categoryAndChildIds(opts.categorySlug);
-    if (ids.length === 0) return { ...EMPTY, page, pageSize };
-    baseConds.push(inArray(products.categoryId, ids));
-  }
+    if (opts.categorySlug) {
+      const ids = await categoryAndChildIds(opts.categorySlug);
+      if (ids.length === 0) return { ...EMPTY, page, pageSize };
+      baseConds.push(inArray(products.categoryId, ids));
+    }
 
-  if (opts.q) {
-    const term = `%${opts.q}%`;
-    baseConds.push(
-      or(
-        ilike(products.name, term),
-        ilike(products.partNumber, term),
-        ilike(brands.name, term),
-      )!,
-    );
-  }
+    if (opts.q) {
+      const term = `%${opts.q}%`;
+      baseConds.push(
+        or(
+          ilike(products.name, term),
+          ilike(products.partNumber, term),
+          ilike(brands.name, term),
+        )!,
+      );
+    }
 
-  if (opts.vehicleId) {
-    baseConds.push(
-      sql`EXISTS (SELECT 1 FROM ${productFitment} WHERE ${productFitment.productId} = ${products.id} AND ${productFitment.vehicleId} = ${opts.vehicleId})`,
-    );
-  }
+    if (opts.vehicleId) {
+      baseConds.push(
+        sql`EXISTS (SELECT 1 FROM ${productFitment} WHERE ${productFitment.productId} = ${products.id} AND ${productFitment.vehicleId} = ${opts.vehicleId})`,
+      );
+    }
 
-  if (opts.vendorId) {
-    baseConds.push(eq(products.vendorId, opts.vendorId));
-  }
+    if (opts.vendorId) {
+      baseConds.push(eq(products.vendorId, opts.vendorId));
+    }
 
-  if (opts.inStockOnly) {
-    baseConds.push(sql`COALESCE(${inventory.quantity}, 0) > 0`);
-  }
+    if (opts.inStockOnly) {
+      baseConds.push(sql`COALESCE(${inventory.quantity}, 0) > 0`);
+    }
 
-  const brandCond = opts.brandSlugs?.length
-    ? inArray(brands.slug, opts.brandSlugs)
-    : undefined;
-  const where = brandCond ? and(...baseConds, brandCond) : and(...baseConds);
+    const brandCond = opts.brandSlugs?.length
+      ? inArray(brands.slug, opts.brandSlugs)
+      : undefined;
+    const where = brandCond ? and(...baseConds, brandCond) : and(...baseConds);
 
-  const rows = await db
-    .select({
-      slug: products.slug,
-      name: products.name,
-      partNumber: products.partNumber,
-      priceCents: products.priceCents,
-      listPriceCents: products.listPriceCents,
-      ratingAvg: products.ratingAvg,
-      ratingCount: products.ratingCount,
-      brandName: brands.name,
-      qty: inventory.quantity,
-      imageUrl: primaryImageSql,
-    })
-    .from(products)
-    .leftJoin(brands, eq(products.brandId, brands.id))
-    .leftJoin(inventory, eq(inventory.productId, products.id))
-    .where(where)
-    .orderBy(orderByFor(opts.sort))
-    .limit(pageSize)
-    .offset((page - 1) * pageSize);
+    const rows = await db
+      .select({
+        slug: products.slug,
+        name: products.name,
+        partNumber: products.partNumber,
+        priceCents: products.priceCents,
+        listPriceCents: products.listPriceCents,
+        ratingAvg: products.ratingAvg,
+        ratingCount: products.ratingCount,
+        brandName: brands.name,
+        qty: inventory.quantity,
+        imageUrl: primaryImageSql,
+      })
+      .from(products)
+      .leftJoin(brands, eq(products.brandId, brands.id))
+      .leftJoin(inventory, eq(inventory.productId, products.id))
+      .where(where)
+      .orderBy(orderByFor(opts.sort))
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
 
-  const totalRows = await db
-    .select({ c: sql<number>`count(*)::int` })
-    .from(products)
-    .leftJoin(brands, eq(products.brandId, brands.id))
-    .leftJoin(inventory, eq(inventory.productId, products.id))
-    .where(where);
+    const totalRows = await db
+      .select({ c: sql<number>`count(*)::int` })
+      .from(products)
+      .leftJoin(brands, eq(products.brandId, brands.id))
+      .leftJoin(inventory, eq(inventory.productId, products.id))
+      .where(where);
 
-  const facetRows = await db
-    .select({
-      slug: brands.slug,
-      name: brands.name,
-      c: sql<number>`count(*)::int`,
-    })
-    .from(products)
-    .innerJoin(brands, eq(products.brandId, brands.id))
-    .leftJoin(inventory, eq(inventory.productId, products.id))
-    .where(and(...baseConds))
-    .groupBy(brands.slug, brands.name)
-    .orderBy(desc(sql`count(*)`));
+    const facetRows = await db
+      .select({
+        slug: brands.slug,
+        name: brands.name,
+        c: sql<number>`count(*)::int`,
+      })
+      .from(products)
+      .innerJoin(brands, eq(products.brandId, brands.id))
+      .leftJoin(inventory, eq(inventory.productId, products.id))
+      .where(and(...baseConds))
+      .groupBy(brands.slug, brands.name)
+      .orderBy(desc(sql`count(*)`));
 
-  return {
-    items: rows.map(toCardItem),
-    total: totalRows[0]?.c ?? 0,
-    page,
-    pageSize,
-    brandFacets: facetRows.map((f) => ({
-      slug: f.slug,
-      name: f.name,
-      count: f.c,
-    })),
-  };
+    return {
+      items: rows.map(toCardItem),
+      total: totalRows[0]?.c ?? 0,
+      page,
+      pageSize,
+      brandFacets: facetRows.map((f) => ({
+        slug: f.slug,
+        name: f.name,
+        count: f.c,
+      })),
+    };
   } catch (err) {
     console.error("[queries] listProducts failed:", err);
     return { ...EMPTY, page, pageSize };
