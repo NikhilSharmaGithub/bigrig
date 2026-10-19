@@ -18,6 +18,7 @@ import {
 } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { NAV_CATEGORIES_TAG } from "@/lib/queries";
+import { productListReturnUrl } from "@/lib/admin-list";
 import { slugify } from "@/lib/vendor";
 import { parseImageUrls, replaceProductImages } from "@/lib/products";
 import { setCommissionBps, updateStoreSettings } from "@/lib/settings";
@@ -115,7 +116,9 @@ export async function createProductAction(
   }
 
   await replaceProductImages(productId, parseImageUrls(f(formData, "images")));
-  redirect("/admin/products");
+  revalidatePath("/admin/products");
+  updateTag(NAV_CATEGORIES_TAG);
+  redirect(productListReturnUrl(formData.get("returnTo")));
 }
 
 export async function updateProductAction(
@@ -170,7 +173,8 @@ export async function updateProductAction(
   await replaceProductImages(id, parseImageUrls(f(formData, "images")));
   revalidatePath("/admin/products");
   updateTag(NAV_CATEGORIES_TAG);
-  redirect("/admin/products");
+  // Back to the page/search the admin was on, scrolled to the row they edited.
+  redirect(productListReturnUrl(formData.get("returnTo"), id));
 }
 
 export async function toggleProductActiveAction(
@@ -424,127 +428,6 @@ export async function toggleCouponAction(
   await requireAdmin();
   await db.update(coupons).set({ active }).where(eq(coupons.id, id));
   revalidatePath("/admin/coupons");
-}
-
-/** Minimal CSV parser supporting quoted fields and escaped quotes. */
-function parseCsv(text: string): string[][] {
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') {
-          field += '"';
-          i++;
-        } else inQuotes = false;
-      } else field += c;
-    } else if (c === '"') inQuotes = true;
-    else if (c === ",") {
-      row.push(field);
-      field = "";
-    } else if (c === "\n") {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = "";
-    } else if (c !== "\r") field += c;
-  }
-  if (field.length > 0 || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-  return rows.filter((r) => r.some((f) => f.trim() !== ""));
-}
-
-export type ImportState = { error?: string; summary?: string };
-
-export async function importProductsAction(
-  _prev: ImportState,
-  formData: FormData,
-): Promise<ImportState> {
-  await requireAdmin();
-  const csv = String(formData.get("csv") ?? "").trim();
-  if (!csv) return { error: "Paste some CSV first." };
-
-  const rows = parseCsv(csv);
-  if (rows.length < 2) {
-    return { error: "Need a header row and at least one product row." };
-  }
-  const header = rows[0].map((h) => h.trim().toLowerCase());
-  const idx = (n: string) => header.indexOf(n);
-  const col = {
-    name: idx("name"),
-    part: idx("partnumber"),
-    price: idx("price"),
-    list: idx("listprice"),
-    cat: idx("category"),
-    brand: idx("brand"),
-    qty: idx("qty"),
-    desc: idx("description"),
-    img: idx("image"),
-  };
-  if (col.name < 0 || col.part < 0 || col.price < 0) {
-    return { error: "CSV must include columns: name, partNumber, price." };
-  }
-
-  const cats = await db.select({ id: categories.id, slug: categories.slug }).from(categories);
-  const catMap = new Map(cats.map((c) => [c.slug, c.id]));
-  const brs = await db.select({ id: brands.id, slug: brands.slug }).from(brands);
-  const brandMap = new Map(brs.map((b) => [b.slug, b.id]));
-
-  let created = 0;
-  const errors: string[] = [];
-  const num = (s: string) => Number(s.replace(/[^0-9.]/g, ""));
-
-  for (let r = 1; r < rows.length; r++) {
-    const cells = rows[r];
-    const get = (i: number) => (i >= 0 && i < cells.length ? cells[i].trim() : "");
-    const name = get(col.name);
-    const part = get(col.part);
-    const price = num(get(col.price));
-    if (!name || !part || !Number.isFinite(price) || price <= 0) {
-      errors.push(`Row ${r + 1}: missing name/partNumber/price`);
-      continue;
-    }
-    const list = num(get(col.list));
-    const slug = `${slugify(name)}-${Math.random().toString(36).slice(2, 6)}`;
-    try {
-      const [p] = await db
-        .insert(products)
-        .values({
-          name,
-          slug,
-          partNumber: part,
-          priceCents: Math.round(price * 100),
-          listPriceCents: Number.isFinite(list) && list > 0 ? Math.round(list * 100) : null,
-          categoryId: catMap.get(get(col.cat)) ?? null,
-          brandId: brandMap.get(get(col.brand)) ?? null,
-          description: get(col.desc) || null,
-          isActive: true,
-        })
-        .returning({ id: products.id });
-      await db.insert(inventory).values({
-        productId: p.id,
-        quantity: Number(get(col.qty)) || 0,
-      });
-      const img = get(col.img);
-      if (/^https?:\/\//i.test(img)) await replaceProductImages(p.id, [img]);
-      created++;
-    } catch {
-      errors.push(`Row ${r + 1}: insert failed`);
-    }
-  }
-
-  revalidatePath("/admin/products");
-  updateTag(NAV_CATEGORIES_TAG);
-  return {
-    summary: `Imported ${created} product${created === 1 ? "" : "s"}.${
-      errors.length ? ` Skipped ${errors.length}: ${errors.slice(0, 4).join("; ")}` : ""
-    }`,
-  };
 }
 
 export async function createCategoryAction(

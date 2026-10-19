@@ -5,13 +5,18 @@ import { ProductForm } from "@/components/admin/ProductForm";
 import { updateProductAction } from "@/app/actions/admin";
 import { getAdminProductById, getSelectableCategories } from "@/lib/admin";
 import { getAllBrands } from "@/lib/queries";
+import { productListReturnPath } from "@/lib/admin-list";
 
 export const metadata: Metadata = { title: "Admin · Edit Product" };
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ back?: string }>;
+};
 
-export default async function EditProductPage({ params }: Props) {
+export default async function EditProductPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const back = productListReturnPath((await searchParams).back);
   const [product, brands, categories] = await Promise.all([
     getAdminProductById(id),
     getAllBrands(),
@@ -22,7 +27,7 @@ export default async function EditProductPage({ params }: Props) {
   return (
     <div>
       <Link
-        href="/admin/products"
+        href={`${back}#p-${id}`}
         className="text-sm font-medium text-brand hover:underline"
       >
         ← Back to products
@@ -34,6 +39,7 @@ export default async function EditProductPage({ params }: Props) {
         <ProductForm
           action={updateProductAction}
           mode="edit"
+          returnTo={back}
           brands={brands.map((b) => ({ id: b.id, label: b.name }))}
           categories={categories}
           values={{

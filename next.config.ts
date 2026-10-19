@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  // Spreadsheet uploads (Admin → Products → Bulk Upload) go through a server action.
+  experimental: {
+    serverActions: { bodySizeLimit: "5mb" },
+  },
+  serverExternalPackages: ["exceljs"],
 };
 
 export default nextConfig;

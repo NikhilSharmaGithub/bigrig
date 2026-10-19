@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { logoutAction } from "@/app/actions/auth";
+import { AdminSearch } from "@/components/admin/AdminSearch";
 
 // Signed-in only: skip build-time prerendering (it only wastes database connections).
 export const dynamic = "force-dynamic";
@@ -68,7 +69,10 @@ export default async function AdminLayout({
           </div>
         </aside>
 
-        <main className="min-w-0 flex-1 p-6">{children}</main>
+        <main className="min-w-0 flex-1 p-6">
+          <AdminSearch />
+          {children}
+        </main>
       </div>
     </div>
   );

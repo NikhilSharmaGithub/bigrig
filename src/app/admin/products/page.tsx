@@ -1,6 +1,13 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getAdminProducts, getSelectableCategories } from "@/lib/admin";
+import {
+  ADMIN_PRODUCTS_PER_PAGE,
+  getAdminProducts,
+  getCategoryFilterOptions,
+  getSelectableCategories,
+} from "@/lib/admin";
+import { productListHref } from "@/lib/admin-list";
+import { ListScrollMemory } from "@/components/admin/ListScrollMemory";
 import { deleteProductAction, toggleProductActiveAction } from "@/app/actions/admin";
 import { DeleteProductButton } from "@/components/admin/DeleteProductButton";
 import { BulkCategoryBar, BULK_FORM_ID } from "@/components/admin/BulkCategoryBar";
@@ -9,27 +16,41 @@ import { formatPrice } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Admin · Products" };
 
-export default async function AdminProductsPage() {
-  const [items, categoryOptions] = await Promise.all([
-    getAdminProducts(),
+type Props = {
+  searchParams: Promise<{ q?: string; cat?: string; status?: string; page?: string }>;
+};
+
+export default async function AdminProductsPage({ searchParams }: Props) {
+  const sp = await searchParams;
+  const q = (sp.q ?? "").trim();
+  const cat = sp.cat ?? "";
+  const status = sp.status === "active" || sp.status === "hidden" ? sp.status : undefined;
+  const [{ items, total, page, pageCount }, categoryOptions, filterCategories] = await Promise.all([
+    getAdminProducts({ q, categoryId: cat || undefined, status, page: Number(sp.page) || 1 }),
     getSelectableCategories(),
+    getCategoryFilterOptions(),
   ]);
+  const filters = { q, cat, status };
+  const here = productListHref({ ...filters, page });
+  const first = total === 0 ? 0 : (page - 1) * ADMIN_PRODUCTS_PER_PAGE + 1;
+  const last = Math.min(total, page * ADMIN_PRODUCTS_PER_PAGE);
+  const filtered = Boolean(q || cat || status);
 
   return (
     <div>
       <div className="flex items-center justify-between">
         <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-steel-900">
-          Products ({items.length})
+          Products ({total.toLocaleString()})
         </h1>
         <div className="flex gap-2">
           <Link
             href="/admin/products/import"
             className="rounded-md border border-border bg-white px-5 py-2.5 font-semibold text-steel-700 hover:border-brand hover:text-brand"
           >
-            Bulk Import
+            Bulk Upload / Export
           </Link>
           <Link
-            href="/admin/products/new"
+            href={`/admin/products/new?back=${encodeURIComponent(here)}`}
             className="rounded-md bg-brand px-5 py-2.5 font-semibold text-white hover:bg-brand-dark"
           >
             + Add Product
@@ -37,7 +58,66 @@ export default async function AdminProductsPage() {
         </div>
       </div>
 
+      <ListScrollMemory />
+
+      <form role="search" className="mt-5 flex flex-wrap items-end gap-2 rounded-lg border border-border bg-white p-3">
+        <label className="min-w-64 flex-1">
+          <span className="sr-only">Search</span>
+          <input
+            type="search"
+            name="q"
+            defaultValue={q}
+            placeholder="Search by part number, name or description…"
+            className="w-full rounded-md border border-border px-3 py-2 text-sm focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand"
+          />
+        </label>
+        <select
+          name="cat"
+          defaultValue={cat}
+          aria-label="Category"
+          className="rounded-md border border-border px-2 py-2 text-sm"
+        >
+          <option value="">All categories</option>
+          {filterCategories.map((parent) => (
+            <optgroup key={parent.id} label={parent.name}>
+              <option value={parent.id}>All {parent.name}</option>
+              {parent.children.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </optgroup>
+          ))}
+        </select>
+        <select
+          name="status"
+          defaultValue={status ?? ""}
+          aria-label="Status"
+          className="rounded-md border border-border px-2 py-2 text-sm"
+        >
+          <option value="">Any status</option>
+          <option value="active">Active</option>
+          <option value="hidden">Hidden</option>
+        </select>
+        <button type="submit" className="rounded-md bg-steel-900 px-5 py-2 text-sm font-semibold text-white hover:bg-steel-700">
+          Search
+        </button>
+        {filtered && (
+          <Link href="/admin/products" className="px-2 py-2 text-sm text-steel-500 hover:text-brand">
+            Clear
+          </Link>
+        )}
+      </form>
+
       <BulkCategoryBar options={categoryOptions} />
+
+      <p className="mt-3 text-sm text-steel-500">
+        {total === 0
+          ? filtered
+            ? "No products match. Try a shorter part number or fewer words."
+            : "No products yet."
+          : `Showing ${first.toLocaleString()}–${last.toLocaleString()} of ${total.toLocaleString()}${filtered ? " matching" : ""}`}
+      </p>
 
       <div className="mt-4 overflow-x-auto rounded-lg border border-border bg-white">
         <table className="w-full text-sm">
@@ -57,7 +137,11 @@ export default async function AdminProductsPage() {
           </thead>
           <tbody className="divide-y divide-border">
             {items.map((p) => (
-              <tr key={p.id} className="hover:bg-steel-50">
+              <tr
+                key={p.id}
+                id={`p-${p.id}`}
+                className="scroll-mt-24 transition-colors duration-700 hover:bg-steel-50 data-flash:bg-accent/20"
+              >
                 <td className="px-4 py-3">
                   <input
                     type="checkbox"
@@ -99,7 +183,8 @@ export default async function AdminProductsPage() {
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-3">
                     <Link
-                      href={`/admin/products/${p.id}`}
+                      href={`/admin/products/${p.id}?back=${encodeURIComponent(here)}`}
+                      data-remember-scroll
                       className="font-semibold text-brand hover:underline"
                     >
                       Edit
@@ -129,6 +214,68 @@ export default async function AdminProductsPage() {
           </tbody>
         </table>
       </div>
+
+      <Pagination page={page} pageCount={pageCount} filters={filters} />
     </div>
+  );
+}
+
+function Pagination({
+  page,
+  pageCount,
+  filters,
+}: {
+  page: number;
+  pageCount: number;
+  filters: { q?: string; cat?: string; status?: string };
+}) {
+  if (pageCount <= 1) return null;
+  const pages = new Set([1, pageCount, page - 2, page - 1, page, page + 1, page + 2]);
+  const shown = [...pages].filter((n) => n >= 1 && n <= pageCount).sort((a, b) => a - b);
+  const link = "rounded-md border border-border bg-white px-3 py-1.5 hover:border-brand hover:text-brand";
+  return (
+    <nav aria-label="Pages" className="mt-4 flex flex-wrap items-center gap-1.5 text-sm">
+      {page > 1 && (
+        <Link href={productListHref({ ...filters, page: page - 1 })} className={link}>
+          ← Prev
+        </Link>
+      )}
+      {shown.map((n, i) => (
+        <span key={n} className="flex items-center gap-1.5">
+          {i > 0 && n - shown[i - 1] > 1 && <span className="px-1 text-steel-400">…</span>}
+          {n === page ? (
+            <span aria-current="page" className="rounded-md bg-steel-900 px-3 py-1.5 font-semibold text-white">
+              {n}
+            </span>
+          ) : (
+            <Link href={productListHref({ ...filters, page: n })} className={link}>
+              {n}
+            </Link>
+          )}
+        </span>
+      ))}
+      {page < pageCount && (
+        <Link href={productListHref({ ...filters, page: page + 1 })} className={link}>
+          Next →
+        </Link>
+      )}
+      <form className="ml-2 flex items-center gap-1">
+        {filters.q && <input type="hidden" name="q" value={filters.q} />}
+        {filters.cat && <input type="hidden" name="cat" value={filters.cat} />}
+        {filters.status && <input type="hidden" name="status" value={filters.status} />}
+        <label className="text-steel-500" htmlFor="goto-page">
+          Go to
+        </label>
+        <input
+          id="goto-page"
+          name="page"
+          type="number"
+          min={1}
+          max={pageCount}
+          defaultValue={page}
+          className="w-16 rounded-md border border-border px-2 py-1"
+        />
+      </form>
+    </nav>
   );
 }

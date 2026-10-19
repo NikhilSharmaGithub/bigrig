@@ -4,10 +4,14 @@ import { ProductForm } from "@/components/admin/ProductForm";
 import { createProductAction } from "@/app/actions/admin";
 import { getSelectableCategories } from "@/lib/admin";
 import { getAllBrands } from "@/lib/queries";
+import { productListReturnPath } from "@/lib/admin-list";
 
 export const metadata: Metadata = { title: "Admin · New Product" };
 
-export default async function NewProductPage() {
+type Props = { searchParams: Promise<{ back?: string }> };
+
+export default async function NewProductPage({ searchParams }: Props) {
+  const back = productListReturnPath((await searchParams).back);
   const [brands, categories] = await Promise.all([
     getAllBrands(),
     getSelectableCategories(),
@@ -16,7 +20,7 @@ export default async function NewProductPage() {
   return (
     <div>
       <Link
-        href="/admin/products"
+        href={back}
         className="text-sm font-medium text-brand hover:underline"
       >
         ← Back to products
@@ -28,6 +32,7 @@ export default async function NewProductPage() {
         <ProductForm
           action={createProductAction}
           mode="create"
+          returnTo={back}
           brands={brands.map((b) => ({ id: b.id, label: b.name }))}
           categories={categories}
         />

@@ -37,6 +37,7 @@ export function ProductForm({
   values,
   includeActive = mode === "edit",
   submitLabel,
+  returnTo,
 }: {
   action: (prev: FormResult, formData: FormData) => Promise<FormResult>;
   mode: "create" | "edit";
@@ -45,6 +46,8 @@ export function ProductForm({
   values?: ProductFormValues;
   includeActive?: boolean;
   submitLabel?: string;
+  /** List URL to come back to after saving (admin keeps its page/search). */
+  returnTo?: string;
 }) {
   const [state, formAction, pending] = useActionState<FormResult, FormData>(
     action,
@@ -66,6 +69,7 @@ export function ProductForm({
       className="max-w-3xl space-y-5 pb-4"
     >
       {mode === "edit" && v.id && <input type="hidden" name="id" value={v.id} />}
+      {returnTo && <input type="hidden" name="returnTo" value={returnTo} />}
 
       {/* Basics */}
       <Section title="Basics" subtitle="The essentials buyers see first.">
