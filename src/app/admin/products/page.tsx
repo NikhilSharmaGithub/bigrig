@@ -39,11 +39,11 @@ export default async function AdminProductsPage({ searchParams }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-steel-900">
           Products ({total.toLocaleString()})
         </h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 whitespace-nowrap">
           <Link
             href="/admin/products/import"
             className="rounded-md border border-border bg-white px-5 py-2.5 font-semibold text-steel-700 hover:border-brand hover:text-brand"

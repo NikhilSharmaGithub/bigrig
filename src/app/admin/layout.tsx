@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { logoutAction } from "@/app/actions/auth";
 import { AdminSearch } from "@/components/admin/AdminSearch";
+import { AdminNav } from "@/components/admin/AdminNav";
 
 // Signed-in only: skip build-time prerendering (it only wastes database connections).
 export const dynamic = "force-dynamic";
@@ -40,17 +41,7 @@ export default async function AdminLayout({
             </p>
             <p className="truncate text-xs text-steel-400">{admin.email}</p>
           </div>
-          <nav className="flex-1 space-y-1 p-3">
-            {NAV.map((n) => (
-              <Link
-                key={n.href}
-                href={n.href}
-                className="block rounded-md px-3 py-2 text-sm font-medium hover:bg-steel-800 hover:text-white"
-              >
-                {n.label}
-              </Link>
-            ))}
-          </nav>
+          <AdminNav items={NAV} variant="sidebar" />
           <div className="space-y-1 border-t border-steel-700 p-3">
             <Link
               href="/"
@@ -70,6 +61,7 @@ export default async function AdminLayout({
         </aside>
 
         <main className="min-w-0 flex-1 p-6">
+          <AdminNav items={[...NAV, { href: "/", label: "View Store" }]} variant="bar" />
           <AdminSearch />
           {children}
         </main>

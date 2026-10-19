@@ -66,7 +66,7 @@ export function BulkCategoryBar({ options }: { options: { id: string; label: str
         name="categoryId"
         defaultValue=""
         aria-label="Move to category"
-        className="rounded-md border border-border bg-white px-2 py-1.5 text-sm"
+        className="min-w-0 max-w-full rounded-md border border-border bg-white px-2 py-1.5 text-sm"
       >
         <option value="">Move to category…</option>
         {options.map((o) => (

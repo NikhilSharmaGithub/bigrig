@@ -34,16 +34,24 @@ export default async function VendorProductsPage({ searchParams }: Props) {
   return (
     <div>
       <ListScrollMemory />
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-steel-900">
           My Products ({total.toLocaleString()})
         </h1>
-        <Link
-          href={`/vendor/products/new?back=${encodeURIComponent(here)}`}
-          className="rounded-md bg-brand px-5 py-2.5 font-semibold text-white hover:bg-brand-dark"
-        >
-          + Add Product
-        </Link>
+        <div className="flex flex-wrap gap-2 whitespace-nowrap">
+          <Link
+            href="/vendor/products/import"
+            className="rounded-md border border-border bg-white px-5 py-2.5 font-semibold text-steel-700 hover:border-brand hover:text-brand"
+          >
+            Bulk Upload / Export
+          </Link>
+          <Link
+            href={`/vendor/products/new?back=${encodeURIComponent(here)}`}
+            className="rounded-md bg-brand px-5 py-2.5 font-semibold text-white hover:bg-brand-dark"
+          >
+            + Add Product
+          </Link>
+        </div>
       </div>
 
       {total === 0 && !filtered ? (

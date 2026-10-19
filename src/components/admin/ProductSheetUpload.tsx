@@ -2,11 +2,17 @@
 
 import Link from "next/link";
 import { startTransition, useActionState, useRef, useState } from "react";
-import { productSheetAction, type SheetUploadState } from "@/app/actions/product-sheet";
+import type { SheetUploadState } from "@/app/actions/product-sheet";
 import { MAX_PAYLOAD_BYTES, SPREADSHEET_EXTENSIONS, packGrid, readSpreadsheet } from "@/lib/sheet-file";
 
-export function ProductSheetUpload() {
-  const [state, formAction, pending] = useActionState<SheetUploadState, FormData>(productSheetAction, {});
+export function ProductSheetUpload({
+  action,
+  productsHref = "/admin/products",
+}: {
+  action: (prev: SheetUploadState, formData: FormData) => Promise<SheetUploadState>;
+  productsHref?: string;
+}) {
+  const [state, formAction, pending] = useActionState<SheetUploadState, FormData>(action, {});
   const [stale, setStale] = useState(false);
   const [busy, setBusy] = useState<"check" | "import" | null>(null);
   const [reading, setReading] = useState(false);
@@ -31,14 +37,24 @@ export function ProductSheetUpload() {
         const file = (form.elements.namedItem("sheet") as HTMLInputElement).files?.[0];
         setReadError(null);
         if (!file) return setReadError("Choose a file to upload.");
-        let blob = packed.current?.file === file ? packed.current.blob : null;
+        // Import sends exactly what was checked. Check always re-reads, so a file
+        // fixed and saved since the last check is picked up.
+        let blob = intent === "import" && packed.current?.file === file ? packed.current.blob : null;
         if (!blob) {
           setReading(true);
           try {
             blob = await packGrid(await readSpreadsheet(file));
           } catch (err) {
             setReading(false);
-            return setReadError(err instanceof Error ? err.message : "Couldn't read that file.");
+            packed.current = null;
+            const changed = err instanceof DOMException && err.name === "NotReadableError";
+            return setReadError(
+              changed
+                ? "The file changed since you chose it. Choose it again, then press Check file."
+                : err instanceof Error
+                  ? err.message
+                  : "Couldn't read that file.",
+            );
           }
           setReading(false);
           if (blob.size > MAX_PAYLOAD_BYTES) {
@@ -105,7 +121,7 @@ export function ProductSheetUpload() {
           <p className="mt-1">
             {done.created.toLocaleString()} added, {done.updated.toLocaleString()} updated
             {done.skipped > 0 && <>, {done.skipped.toLocaleString()} rows skipped</>}.{" "}
-            <Link href="/admin/products" className="font-semibold text-brand hover:underline">
+            <Link href={productsHref} className="font-semibold text-brand hover:underline">
               View products →
             </Link>
           </p>

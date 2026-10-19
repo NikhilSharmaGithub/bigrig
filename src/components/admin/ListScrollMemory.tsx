@@ -11,7 +11,15 @@ const KEY = "admin-products-scroll";
  */
 export function ListScrollMemory() {
   useEffect(() => {
-    const here = () => window.location.pathname + window.location.search;
+    // Search forms submit empty fields ("?q=&cat=&status="); the URL we come back to
+    // after saving leaves them out, so compare without empty values (or page=1).
+    const here = () => {
+      const params = new URLSearchParams(window.location.search);
+      for (const [k, v] of [...params]) if (!v || (k === "page" && v === "1")) params.delete(k);
+      params.sort();
+      const qs = params.toString();
+      return window.location.pathname + (qs ? `?${qs}` : "");
+    };
 
     function remember(e: MouseEvent) {
       const link = (e.target as Element | null)?.closest?.("a[data-remember-scroll]");

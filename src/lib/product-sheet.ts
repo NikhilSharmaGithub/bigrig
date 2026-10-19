@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import ExcelJS from "exceljs";
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { brands, categories, inventory, productImages, products } from "@/db/schema";
 import { slugify } from "@/lib/vendor";
@@ -48,7 +48,7 @@ export const SHEET_COLUMNS: Column[] = [
   { key: "listPrice", header: "List Price", aliases: ["msrp", "compareatprice", "retailprice", "wasprice"], help: "Optional. Higher 'was' price shown struck through. [clear] removes it.", width: 10 },
   { key: "qty", header: "Quantity", aliases: ["qty", "stock", "onhand", "inventory", "quantityonhand"], help: "Units in stock (whole number). 0 = backorder.", width: 10 },
   { key: "category", header: "Category", aliases: ["subcategory", "categorypath"], help: "Subcategory exactly as on the Categories sheet, e.g. 'Brakes, Suspension & Steering > Air Brake Valves'. The subcategory name alone also works when it is unique. [clear] removes the category.", width: 42 },
-  { key: "brand", header: "Brand", aliases: ["manufacturer", "make", "mfr"], help: "Brand name. A brand that doesn't exist yet is created. [clear] removes the brand.", width: 18 },
+  { key: "brand", header: "Brand", aliases: ["manufacturer", "make", "mfr"], help: "Brand name, as on the Brands sheet. (Store admins can also type a new brand; it is created.) [clear] removes the brand.", width: 18 },
   { key: "status", header: "Status", aliases: ["active", "visible", "visibility"], help: "Active (shown in the store) or Hidden. New products default to Active.", width: 10 },
   { key: "description", header: "Description", aliases: ["longdescription", "details", "body"], help: "Product description. [clear] empties it.", width: 50 },
   { key: "highlights", header: "Highlights", aliases: ["bullets", "features", "bulletpoints"], help: "Bullet points: one per line inside the cell, or separated by |", width: 40 },
@@ -146,6 +146,7 @@ type PlannedRow = {
 };
 
 export type SheetPlan = {
+  vendorId?: string;
   rows: PlannedRow[];
   errors: SheetIssue[];
   warnings: SheetIssue[];
@@ -155,10 +156,28 @@ export type SheetPlan = {
 
 const header = (k: Key) => SHEET_COLUMNS.find((c) => c.key === k)!.header;
 
-function money(raw: string): number | null {
-  const s = raw.replace(/[$,\s]/g, "");
+const MAX_PRICE_CENTS = 100_000_000; // $1,000,000: anything above is a pasted UPC or a typo
+const MAX_QTY = 1_000_000;
+const MAX_CELL = 20_000;
+
+/**
+ * "24.99", "1,234.50", and the decimal-comma forms Excel writes in many locales
+ * ("24,99", "1.234,50"). Anything ambiguous or malformed returns null.
+ */
+function decimal(raw: string): number | null {
+  let s = raw.replace(/[$€£\s]/g, "");
+  if (/^\d{1,3}(\.\d{3})+,\d{1,2}$/.test(s)) s = s.replace(/\./g, "").replace(",", ".");
+  else if (/^\d+,\d{1,2}$/.test(s)) s = s.replace(",", ".");
+  else if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g, "");
+  // "1.000" / "12.500.000": dots as thousands separators (nobody writes $1 as "1.000").
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, "");
   if (!/^\d+(\.\d+)?$/.test(s)) return null;
-  return Math.round(Number(s) * 100);
+  return Number(s);
+}
+
+function money(raw: string): number | null {
+  const n = decimal(raw);
+  return n === null ? null : Math.round(n * 100);
 }
 
 function parseStatus(raw: string): boolean | null {
@@ -171,7 +190,8 @@ function parseStatus(raw: string): boolean | null {
 function parseImages(raw: string): { urls: string[]; bad: string[] } {
   // Full links, or this site's own paths ("/products/x.svg") as found in exports.
   const ok = (u: string) => /^https?:\/\/\S+$/i.test(u) || /^\/(?!\/)\S+$/.test(u);
-  const parts = raw.split(/[\s,|]+/).filter(Boolean);
+  // Commas only separate links when another link follows; CDN URLs contain commas ("w_400,h_400").
+  const parts = raw.split(/[\s|]+|,(?=\s*(?:https?:\/\/|\/))/).filter(Boolean);
   return { urls: parts.filter(ok).slice(0, MAX_IMAGES), bad: parts.filter((u) => !ok(u)) };
 }
 
@@ -183,31 +203,37 @@ function highlightsText(raw: string): string {
 const partKey = (s: string) => s.trim().toUpperCase();
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Category lookup: "Parent > Child", subcategory slug, or a unique subcategory name. */
+/**
+ * Category lookup: "Parent > Child", a category name (an error when it is
+ * ambiguous), or a slug typed exactly.
+ */
 async function categoryResolver() {
   const all = await db
     .select({ id: categories.id, slug: categories.slug, name: categories.name, parentId: categories.parentId })
     .from(categories);
   const byId = new Map(all.map((c) => [c.id, c]));
-  const exact = new Map<string, string>();
+  const byPath = new Map<string, string>();
   const byName = new Map<string, string[]>();
+  const bySlug = new Map(all.map((c) => [c.slug, c.id]));
   for (const c of all) {
-    exact.set(norm(c.slug), c.id);
     const parent = c.parentId ? byId.get(c.parentId) : null;
-    if (parent) exact.set(norm(`${parent.name}>${c.name}`), c.id);
-    const list = byName.get(norm(c.name)) ?? [];
-    list.push(c.id);
-    byName.set(norm(c.name), list);
+    if (parent) byPath.set(norm(`${parent.name}>${c.name}`), c.id);
+    byName.set(norm(c.name), [...(byName.get(norm(c.name)) ?? []), c.id]);
   }
   return (raw: string): { id?: string; error?: string } => {
-    const key = norm(raw.replace(/›|»|\//g, ">"));
-    const hit = exact.get(key);
-    if (hit) return { id: hit };
-    const named = byName.get(key) ?? byName.get(norm(raw.split(/>|›|»|\//).pop() ?? ""));
-    if (named?.length === 1) return { id: named[0] };
-    if (named && named.length > 1) {
-      return { error: `"${raw}" matches more than one category; write it as "Parent > ${raw}"` };
+    const isPath = /[>›»]/.test(raw);
+    if (isPath) {
+      const hit = byPath.get(norm(raw));
+      if (hit) return { id: hit };
     }
+    const name = isPath ? (raw.split(/[>›»]/).pop() ?? "").trim() : raw;
+    const named = byName.get(norm(name)) ?? [];
+    if (named.length === 1) return { id: named[0] };
+    if (named.length > 1) {
+      return { error: `"${name}" matches more than one category; write it as "Parent > ${name}" (see the Categories sheet).` };
+    }
+    const slug = bySlug.get(raw.trim().toLowerCase());
+    if (slug) return { id: slug };
     return { error: `Unknown category "${raw}". Use a name from the Categories sheet of the template.` };
   };
 }
@@ -218,6 +244,11 @@ const CLEAR = Symbol("clear");
 export type PlanOptions = {
   /** On updates, an empty cell in a column the file has empties that field (for edited exports). */
   blankClears?: boolean;
+  /**
+   * Set for a marketplace vendor's upload: only their own products can be matched
+   * and updated, new rows are listed under them, and they can't create brands.
+   */
+  vendorId?: string;
 };
 
 export async function planProductSheet(rows: RawRow[], options: PlanOptions = {}): Promise<SheetPlan> {
@@ -225,7 +256,11 @@ export async function planProductSheet(rows: RawRow[], options: PlanOptions = {}
   const warnings: SheetIssue[] = [];
 
   const [existing, brandRows, resolveCategory] = await Promise.all([
-    db.select({ id: products.id, partNumber: products.partNumber, name: products.name }).from(products),
+    db
+      .select({ id: products.id, partNumber: products.partNumber, name: products.name })
+      .from(products)
+      // Admin uploads cover the store's own products; vendors' listings are theirs to edit.
+      .where(options.vendorId ? eq(products.vendorId, options.vendorId) : isNull(products.vendorId)),
     db.select({ id: brands.id, slug: brands.slug, name: brands.name }).from(brands),
     categoryResolver(),
   ]);
@@ -291,7 +326,10 @@ export async function planProductSheet(rows: RawRow[], options: PlanOptions = {}
     // --- field values. Blank = unchanged on updates; [clear] (or a blank, when
     // blankClears is on) empties a field that is allowed to be empty.
     for (const [k, v] of Object.entries(cells) as [Key, string][]) {
-      if (CLEAR_RE.test(v) && !CLEARABLE.has(k)) {
+      if (v.length > MAX_CELL) {
+        err(k, `Cell is longer than ${MAX_CELL.toLocaleString()} characters. Shorten it.`);
+        cells[k] = "";
+      } else if (CLEAR_RE.test(v) && !CLEARABLE.has(k)) {
         err(k, `${header(k)} can't be cleared.`);
         cells[k] = "";
       }
@@ -307,9 +345,28 @@ export async function planProductSheet(rows: RawRow[], options: PlanOptions = {}
     const changes: string[] = [];
     if (part) {
       if (part.length > 80) err("partNumber", "Part number is longer than 80 characters.");
-      else if (action === "create" || (id && partKey(part) !== partKey(byId.get(productId)?.partNumber ?? ""))) {
+      else if (action === "create") {
         fields.partNumber = part;
-        if (action === "update") changes.push("part number");
+      } else if (id && partKey(part) !== partKey(byId.get(productId)?.partNumber ?? "")) {
+        // A rename via the ID column. Excel often mangles part numbers in CSVs
+        // ("00123" → "123"), so say so loudly, and never create a duplicate.
+        const key = partKey(part);
+        const taken = (byPart.get(key) ?? []).some((other) => other !== productId);
+        const firstNew = claimed.get(`new:${key}`);
+        if (rowErrors.length) {
+          // Row is already rejected; no point warning about the rename too.
+        } else if (taken) err("partNumber", `Part number "${part}" already belongs to another product.`);
+        else if (firstNew) err("partNumber", `Part number "${part}" is also used by row ${firstNew}.`);
+        else {
+          fields.partNumber = part;
+          changes.push("part number");
+          claimed.set(`new:${key}`, line);
+          warnings.push({
+            line,
+            column: header("partNumber"),
+            message: `Part number changes from "${byId.get(productId)?.partNumber}" to "${part}". If you didn't mean this, Excel may have reformatted it.`,
+          });
+        }
       }
     }
     const name = get("name");
@@ -325,6 +382,7 @@ export async function planProductSheet(rows: RawRow[], options: PlanOptions = {}
     if (price) {
       const cents = money(price);
       if (cents === null || cents <= 0) err("price", `Price "${price}" isn't a valid dollar amount.`);
+      else if (cents > MAX_PRICE_CENTS) err("price", `Price "${price}" is over $1,000,000. Is this a part number or barcode?`);
       else {
         fields.priceCents = cents;
         changes.push("price");
@@ -338,6 +396,7 @@ export async function planProductSheet(rows: RawRow[], options: PlanOptions = {}
     } else if (list) {
       const cents = money(list);
       if (cents === null) err("listPrice", `List price "${list}" isn't a valid dollar amount.`);
+      else if (cents > MAX_PRICE_CENTS) err("listPrice", `List price "${list}" is over $1,000,000.`);
       else {
         fields.listPriceCents = cents > 0 ? cents : null;
         changes.push("list price");
@@ -350,8 +409,9 @@ export async function planProductSheet(rows: RawRow[], options: PlanOptions = {}
     let qty: number | undefined;
     const qtyRaw = get("qty");
     if (qtyRaw) {
-      const n = Number(qtyRaw.replace(/,/g, ""));
-      if (!Number.isFinite(n) || n < 0 || !Number.isInteger(n)) err("qty", `Quantity "${qtyRaw}" must be a whole number, 0 or more.`);
+      const n = decimal(qtyRaw);
+      if (n === null || !Number.isInteger(n)) err("qty", `Quantity "${qtyRaw}" must be a whole number, 0 or more.`);
+      else if (n > MAX_QTY) err("qty", `Quantity "${qtyRaw}" is over ${MAX_QTY.toLocaleString()}.`);
       else {
         qty = n;
         changes.push("quantity");
@@ -379,9 +439,13 @@ export async function planProductSheet(rows: RawRow[], options: PlanOptions = {}
       const k = norm(brand);
       if (!k) err("brand", "Brand name has no letters or numbers.");
       else {
-        fields.brandKey = k;
-        changes.push("brand");
-        if (!knownBrands.has(k) && !newBrands.has(k)) newBrands.set(k, brand);
+        if (!knownBrands.has(k) && options.vendorId) {
+          err("brand", `Unknown brand "${brand}". Use a brand from the Brands sheet of the template, or ask us to add it.`);
+        } else {
+          fields.brandKey = k;
+          changes.push("brand");
+          if (!knownBrands.has(k) && !newBrands.has(k)) newBrands.set(k, brand);
+        }
       }
     }
 
@@ -444,7 +508,14 @@ export async function planProductSheet(rows: RawRow[], options: PlanOptions = {}
     warnings.push({ line: 0, column: "Brand", message: `New brand "${original}" will be created.` });
   }
 
-  return { rows: planned, errors, warnings, newBrands: [...newBrands.values()], totalRows: rows.length };
+  return {
+    vendorId: options.vendorId,
+    rows: planned,
+    errors,
+    warnings,
+    newBrands: [...newBrands.values()],
+    totalRows: rows.length,
+  };
 }
 
 /* ----------------------------------------------------------------------------
@@ -492,6 +563,7 @@ export async function applyProductSheet(plan: SheetPlan): Promise<{ created: num
         slugs.add(slug);
         return {
           id: r.productId,
+          vendorId: plan.vendorId ?? null,
           slug,
           name: r.fields.name!,
           partNumber: r.fields.partNumber!,
@@ -518,7 +590,9 @@ export async function applyProductSheet(plan: SheetPlan): Promise<{ created: num
           const set: Partial<typeof products.$inferInsert> = { ...rest, updatedAt: now };
           const b = brandOf(r.fields);
           if (b !== undefined) set.brandId = b;
-          return tx.update(products).set(set).where(eq(products.id, r.productId));
+          // The vendor check repeats the plan's scoping, so a vendor can only ever touch their own rows.
+          const own = plan.vendorId ? eq(products.vendorId, plan.vendorId) : isNull(products.vendorId);
+          return tx.update(products).set(set).where(and(eq(products.id, r.productId), own));
         }),
       );
     }
@@ -593,7 +667,7 @@ async function categoryChoices(): Promise<string[]> {
     .sort((a, b) => a.localeCompare(b));
 }
 
-async function exportRows(): Promise<SheetRow[]> {
+async function exportRows(vendorId?: string): Promise<SheetRow[]> {
   // Columns spelled out: drizzle leaves them unqualified inside a correlated subquery.
   const parent = sql<string | null>`(SELECT p."name" FROM "categories" p WHERE p."id" = "categories"."parent_id")`;
   const rows = await db
@@ -617,6 +691,7 @@ async function exportRows(): Promise<SheetRow[]> {
     .leftJoin(brands, eq(products.brandId, brands.id))
     .leftJoin(categories, eq(products.categoryId, categories.id))
     .leftJoin(inventory, eq(inventory.productId, products.id))
+    .where(vendorId ? eq(products.vendorId, vendorId) : isNull(products.vendorId))
     .orderBy(products.partNumber);
   return rows.map((r) => ({
     id: r.id,
@@ -646,7 +721,18 @@ function toCsv(rows: SheetRow[]): string {
   return `﻿${lines.join("\r\n")}\r\n`;
 }
 
-async function toXlsx(rows: SheetRow[], cats: string[], forTemplate: boolean): Promise<Buffer> {
+async function brandChoices(): Promise<string[]> {
+  const rows = await db.select({ name: brands.name }).from(brands).orderBy(brands.name);
+  return rows.map((b) => b.name);
+}
+
+async function toXlsx(
+  rows: SheetRow[],
+  cats: string[],
+  brandNames: string[],
+  forTemplate: boolean,
+  editPath: string,
+): Promise<Buffer> {
   const wb = new ExcelJS.Workbook();
   wb.creator = "Nova A to Z Parts";
   const ws = wb.addWorksheet("Products", { views: [{ state: "frozen", ySplit: 1 }] });
@@ -677,6 +763,14 @@ async function toXlsx(rows: SheetRow[], cats: string[], forTemplate: boolean): P
       formulae: [`Categories!$A$2:$A$${cats.length + 1}`],
     });
   }
+  if (brandNames.length) {
+    // No error alert: a new brand can still be typed in (admins create it on import).
+    validations.add(`${col("brand")}2:${col("brand")}${last}`, {
+      type: "list",
+      allowBlank: true,
+      formulae: [`Brands!$A$2:$A$${brandNames.length + 1}`],
+    });
+  }
   validations.add(`${col("status")}2:${col("status")}${last}`, {
     type: "list",
     allowBlank: true,
@@ -687,6 +781,11 @@ async function toXlsx(rows: SheetRow[], cats: string[], forTemplate: boolean): P
   cs.columns = [{ header: "Category (copy into the Category column)", key: "c", width: 70 }];
   cs.getRow(1).font = { bold: true };
   for (const c of cats) cs.addRow({ c });
+
+  const bs = wb.addWorksheet("Brands");
+  bs.columns = [{ header: "Brand (copy into the Brand column)", key: "b", width: 40 }];
+  bs.getRow(1).font = { bold: true };
+  for (const b of brandNames) bs.addRow({ b });
 
   const help = wb.addWorksheet("How to use");
   help.columns = [
@@ -702,7 +801,7 @@ async function toXlsx(rows: SheetRow[], cats: string[], forTemplate: boolean): P
     "When updating, leave a cell blank to keep the current value; only filled-in cells change.",
     `To empty a field (List Price, Category, Brand, Description, Highlights, Keywords, Image URLs), type ${CLEAR_MARKER} in the cell.`,
     "Uploading an edited export? Tick 'Empty cells clear the field' on the upload page, so cells you emptied are cleared too.",
-    "To edit many existing products: Admin → Products → Bulk Upload → Export all products, change the cells, upload it back.",
+    `To edit many existing products: ${editPath} → Bulk Upload → Export, change the cells, upload it back.`,
     "Upload shows every problem first (row and column); nothing is saved until you press Import.",
   ]) {
     help.addRow({ t });
@@ -715,15 +814,23 @@ async function toXlsx(rows: SheetRow[], cats: string[], forTemplate: boolean): P
 export async function buildProductSheet(
   kind: "template" | "export",
   format: SheetFormat,
+  /** A vendor's export holds only their own products. */
+  vendorId?: string,
 ): Promise<{ body: Buffer | string; filename: string; contentType: string }> {
-  const rows = kind === "template" ? EXAMPLES : await exportRows();
+  const rows = kind === "template" ? EXAMPLES : await exportRows(vendorId);
   const date = new Date().toISOString().slice(0, 10);
   const base = kind === "template" ? "product-upload-template" : `products-export-${date}`;
   if (format === "csv") {
     return { body: toCsv(rows), filename: `${base}.csv`, contentType: "text/csv; charset=utf-8" };
   }
   return {
-    body: await toXlsx(rows, await categoryChoices(), kind === "template"),
+    body: await toXlsx(
+      rows,
+      await categoryChoices(),
+      await brandChoices(),
+      kind === "template",
+      vendorId ? "Vendor → My Products" : "Admin → Products",
+    ),
     filename: `${base}.xlsx`,
     contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   };
