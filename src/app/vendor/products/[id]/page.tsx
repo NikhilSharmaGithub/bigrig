@@ -6,14 +6,19 @@ import { updateVendorProductAction } from "@/app/actions/vendor";
 import { requireVendor, getVendorProductById } from "@/lib/vendor";
 import { getSelectableCategories } from "@/lib/admin";
 import { getAllBrands } from "@/lib/queries";
+import { VENDOR_PRODUCTS, productListReturnPath } from "@/lib/admin-list";
 
 export const metadata: Metadata = { title: "Edit Product" };
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ back?: string }>;
+};
 
-export default async function VendorEditProductPage({ params }: Props) {
+export default async function VendorEditProductPage({ params, searchParams }: Props) {
   const { vendor } = await requireVendor();
   const { id } = await params;
+  const back = productListReturnPath((await searchParams).back, VENDOR_PRODUCTS);
   const [product, brands, categories] = await Promise.all([
     getVendorProductById(vendor.id, id),
     getAllBrands(),
@@ -24,7 +29,7 @@ export default async function VendorEditProductPage({ params }: Props) {
   return (
     <div>
       <Link
-        href="/vendor/products"
+        href={`${back}#p-${id}`}
         className="text-sm font-medium text-brand hover:underline"
       >
         ← Back to my products
@@ -36,6 +41,7 @@ export default async function VendorEditProductPage({ params }: Props) {
         <ProductForm
           action={updateVendorProductAction}
           mode="edit"
+          returnTo={back}
           brands={brands.map((b) => ({ id: b.id, label: b.name }))}
           categories={categories}
           values={{

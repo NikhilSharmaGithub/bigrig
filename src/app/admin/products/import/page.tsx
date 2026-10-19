@@ -22,7 +22,7 @@ export default async function ImportProductsPage() {
         Bulk Upload
       </h1>
       <p className="mt-1 text-sm text-steel-600">
-        Add new parts or update existing ones from an Excel or CSV file.
+        Add new parts or update existing ones from an Excel (.xlsx or .xls), OpenDocument (.ods) or CSV file.
       </p>
 
       <section className="mt-6 rounded-lg border border-border bg-white p-5">
@@ -59,6 +59,12 @@ export default async function ImportProductsPage() {
             a product is <b>added</b> (then <b>Name</b> and <b>Price</b> are required too).
           </li>
           <li>When updating, leave a cell blank to keep the current value. Only filled-in cells change.</li>
+          <li>
+            To empty a field (List Price, Category, Brand, Description, Highlights, Keywords, Image URLs), type{" "}
+            <code className="rounded bg-steel-100 px-1">[clear]</code> in that cell. Or tick &ldquo;Empty cells clear the
+            field&rdquo; below when uploading an edited export.
+          </li>
+          <li>Up to 50,000 rows per file. Bigger catalogs can be uploaded in several files.</li>
           <li>
             Optional: List Price, Quantity, Category, Brand, Status (Active/Hidden), Description, Highlights, Keywords,
             Image URLs. Hover a header in the Excel template for help.

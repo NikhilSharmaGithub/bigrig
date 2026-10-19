@@ -5,11 +5,15 @@ import { createVendorProductAction } from "@/app/actions/vendor";
 import { requireVendor } from "@/lib/vendor";
 import { getSelectableCategories } from "@/lib/admin";
 import { getAllBrands } from "@/lib/queries";
+import { VENDOR_PRODUCTS, productListReturnPath } from "@/lib/admin-list";
 
 export const metadata: Metadata = { title: "Add Product" };
 
-export default async function VendorNewProductPage() {
+type Props = { searchParams: Promise<{ back?: string }> };
+
+export default async function VendorNewProductPage({ searchParams }: Props) {
   await requireVendor();
+  const back = productListReturnPath((await searchParams).back, VENDOR_PRODUCTS);
   const [brands, categories] = await Promise.all([
     getAllBrands(),
     getSelectableCategories(),
@@ -18,7 +22,7 @@ export default async function VendorNewProductPage() {
   return (
     <div>
       <Link
-        href="/vendor/products"
+        href={back}
         className="text-sm font-medium text-brand hover:underline"
       >
         ← Back to my products
@@ -30,6 +34,7 @@ export default async function VendorNewProductPage() {
         <ProductForm
           action={createVendorProductAction}
           mode="create"
+          returnTo={back}
           brands={brands.map((b) => ({ id: b.id, label: b.name }))}
           categories={categories}
           submitLabel="List Product"

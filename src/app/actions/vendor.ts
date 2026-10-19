@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { VENDOR_PRODUCTS, productListReturnUrl } from "@/lib/admin-list";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { inventory, products, vendors } from "@/db/schema";
@@ -121,7 +122,10 @@ export async function createVendorProductAction(
   }
 
   await replaceProductImages(productId, parseImageUrls(f(formData, "images")));
-  redirect("/vendor/products");
+  revalidatePath("/vendor/products");
+  redirect(
+    productListReturnUrl(formData.get("returnTo"), undefined, VENDOR_PRODUCTS),
+  );
 }
 
 export async function updateVendorProductAction(
@@ -146,25 +150,30 @@ export async function updateVendorProductAction(
   });
   if (!owned) return { error: "Product not found." };
 
-  await db
-    .update(products)
-    .set({
-      name,
-      slug,
-      partNumber,
-      brandId: f(formData, "brandId") || null,
-      categoryId: f(formData, "categoryId") || null,
-      priceCents: price,
-      listPriceCents: dollarsToCents(f(formData, "listPrice")),
-      description: f(formData, "description") || null,
-      highlights: f(formData, "highlights") || null,
-      keywords: f(formData, "keywords") || null,
-      metaTitle: f(formData, "metaTitle") || null,
-      metaDescription: f(formData, "metaDescription") || null,
-      isActive: formData.get("isActive") === "on",
-      updatedAt: new Date(),
-    })
-    .where(eq(products.id, id));
+  try {
+    await db
+      .update(products)
+      .set({
+        name,
+        slug,
+        partNumber,
+        brandId: f(formData, "brandId") || null,
+        categoryId: f(formData, "categoryId") || null,
+        priceCents: price,
+        listPriceCents: dollarsToCents(f(formData, "listPrice")),
+        description: f(formData, "description") || null,
+        highlights: f(formData, "highlights") || null,
+        keywords: f(formData, "keywords") || null,
+        metaTitle: f(formData, "metaTitle") || null,
+        metaDescription: f(formData, "metaDescription") || null,
+        isActive: formData.get("isActive") === "on",
+        updatedAt: new Date(),
+      })
+      .where(eq(products.id, id));
+  } catch {
+    // Most likely the URL slug is already used by another product.
+    return { error: "Could not save. Try a different URL slug." };
+  }
 
   const qty = Number(f(formData, "qty")) || 0;
   const inv = await db.query.inventory.findFirst({
@@ -181,7 +190,8 @@ export async function updateVendorProductAction(
 
   await replaceProductImages(id, parseImageUrls(f(formData, "images")));
   revalidatePath("/vendor/products");
-  redirect("/vendor/products");
+  // Back to the page/search the vendor was on, scrolled to the row they edited.
+  redirect(productListReturnUrl(formData.get("returnTo"), id, VENDOR_PRODUCTS));
 }
 
 export async function deleteVendorProductAction(id: string): Promise<void> {

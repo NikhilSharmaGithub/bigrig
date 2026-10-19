@@ -7,16 +7,21 @@ import { brands, categories, inventory, productImages, products } from "@/db/sch
 import { slugify } from "@/lib/vendor";
 
 /**
- * Bulk add / update of products from a spreadsheet (.xlsx or .csv).
+ * Bulk add / update of products from a spreadsheet. The browser reads the file
+ * (.xlsx, .xls, .ods, .csv, see lib/sheet-file.ts) and sends the cell grid; this
+ * module validates it, plans the changes and writes them.
  *
  * Rows match an existing product by ID (present in exports) or else by part
  * number; anything unmatched is created. On updates a blank cell means "leave
- * as is", so a sheet only needs the columns being changed.
+ * as is" (unless the upload asks for blanks to clear), and "[clear]" empties a
+ * field on purpose.
  */
 
-export const MAX_SHEET_ROWS = 5000;
-export const MAX_SHEET_BYTES = 4 * 1024 * 1024;
+export const MAX_SHEET_ROWS = 50_000;
 const MAX_IMAGES = 8;
+/** Typed into a cell to empty that field, e.g. remove a list price or all images. */
+export const CLEAR_MARKER = "[clear]";
+const CLEAR_RE = /^\[\s*clear\s*\]$/i;
 
 type Key =
   | "id"
@@ -40,15 +45,15 @@ export const SHEET_COLUMNS: Column[] = [
   { key: "partNumber", header: "Part Number", aliases: ["partno", "part", "partnum", "sku", "mpn"], help: "Required. Used to find the product to update; new part numbers are added as new products.", width: 18 },
   { key: "name", header: "Name", aliases: ["title", "productname", "partname", "description1"], help: "Required for new products. The product title shoppers see.", width: 40 },
   { key: "price", header: "Price", aliases: ["saleprice", "ourprice", "unitprice"], help: "Required for new products. Selling price in US dollars, e.g. 49.99.", width: 10 },
-  { key: "listPrice", header: "List Price", aliases: ["msrp", "compareatprice", "retailprice", "wasprice"], help: "Optional. Higher 'was' price shown struck through.", width: 10 },
+  { key: "listPrice", header: "List Price", aliases: ["msrp", "compareatprice", "retailprice", "wasprice"], help: "Optional. Higher 'was' price shown struck through. [clear] removes it.", width: 10 },
   { key: "qty", header: "Quantity", aliases: ["qty", "stock", "onhand", "inventory", "quantityonhand"], help: "Units in stock (whole number). 0 = backorder.", width: 10 },
-  { key: "category", header: "Category", aliases: ["subcategory", "categorypath"], help: "Subcategory exactly as on the Categories sheet, e.g. 'Brakes, Suspension & Steering > Air Brake Valves'. The subcategory name alone also works when it is unique.", width: 42 },
-  { key: "brand", header: "Brand", aliases: ["manufacturer", "make", "mfr"], help: "Brand name. A brand that doesn't exist yet is created.", width: 18 },
+  { key: "category", header: "Category", aliases: ["subcategory", "categorypath"], help: "Subcategory exactly as on the Categories sheet, e.g. 'Brakes, Suspension & Steering > Air Brake Valves'. The subcategory name alone also works when it is unique. [clear] removes the category.", width: 42 },
+  { key: "brand", header: "Brand", aliases: ["manufacturer", "make", "mfr"], help: "Brand name. A brand that doesn't exist yet is created. [clear] removes the brand.", width: 18 },
   { key: "status", header: "Status", aliases: ["active", "visible", "visibility"], help: "Active (shown in the store) or Hidden. New products default to Active.", width: 10 },
-  { key: "description", header: "Description", aliases: ["longdescription", "details", "body"], help: "Product description.", width: 50 },
+  { key: "description", header: "Description", aliases: ["longdescription", "details", "body"], help: "Product description. [clear] empties it.", width: 50 },
   { key: "highlights", header: "Highlights", aliases: ["bullets", "features", "bulletpoints"], help: "Bullet points: one per line inside the cell, or separated by |", width: 40 },
   { key: "keywords", header: "Keywords", aliases: ["tags", "searchterms", "crossreference", "interchange"], help: "Comma-separated search words, e.g. cross-reference part numbers.", width: 30 },
-  { key: "images", header: "Image URLs", aliases: ["images", "image", "imageurl", "photos", "photo", "picture"], help: `Up to ${MAX_IMAGES} image links (https://…), separated by spaces, commas or |. Replaces the product's current images.`, width: 50 },
+  { key: "images", header: "Image URLs", aliases: ["images", "image", "imageurl", "photos", "photo", "picture"], help: `Up to ${MAX_IMAGES} image links (https://…), separated by spaces, commas or |. Replaces the product's current images; [clear] removes them all.`, width: 50 },
   { key: "id", header: "ID", aliases: ["productid", "uuid"], help: "Leave blank for new products. Filled in when you export — keep it to update that exact product.", width: 38 },
 ];
 
@@ -61,100 +66,14 @@ for (const c of SHEET_COLUMNS) {
 }
 
 /* ----------------------------------------------------------------------------
- * Reading files
+ * Reading the uploaded grid
  * ------------------------------------------------------------------------- */
 
 type RawRow = { line: number; cells: Partial<Record<Key, string>> };
 export type ParsedSheet = { rows: RawRow[]; unknownHeaders: string[] } | { error: string };
 
-function parseCsv(text: string): string[][] {
-  const firstLine = text.split("\n", 1)[0];
-  const counts = [",", ";", "\t"].map((d) => [d, firstLine.split(d).length] as const);
-  const delim = counts.sort((a, b) => b[1] - a[1])[0][0];
-
-  const rows: string[][] = [];
-  let row: string[] = [];
-  let field = "";
-  let inQuotes = false;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i];
-    if (inQuotes) {
-      if (c === '"') {
-        if (text[i + 1] === '"') {
-          field += '"';
-          i++;
-        } else inQuotes = false;
-      } else field += c;
-    } else if (c === '"') inQuotes = true;
-    else if (c === delim) {
-      row.push(field);
-      field = "";
-    } else if (c === "\n") {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = "";
-    } else if (c !== "\r") field += c;
-  }
-  if (field.length > 0 || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-  return rows;
-}
-
-function cellText(v: ExcelJS.CellValue): string {
-  if (v === null || v === undefined) return "";
-  if (typeof v === "string") return v;
-  if (typeof v === "number") return String(v);
-  if (typeof v === "boolean") return v ? "TRUE" : "FALSE";
-  if (v instanceof Date) return v.toISOString().slice(0, 10);
-  if (typeof v === "object") {
-    if ("richText" in v) return v.richText.map((t) => t.text).join("");
-    if ("hyperlink" in v) return String(v.hyperlink || v.text || "");
-    if ("result" in v) return cellText(v.result as ExcelJS.CellValue);
-    if ("text" in v) return String(v.text);
-    if ("error" in v) return "";
-  }
-  return String(v);
-}
-
-async function readXlsx(buf: ArrayBuffer): Promise<string[][] | { error: string }> {
-  const wb = new ExcelJS.Workbook();
-  try {
-    await wb.xlsx.load(buf);
-  } catch {
-    return { error: "Couldn't read that Excel file. Save it as .xlsx (Excel Workbook) or .csv and try again." };
-  }
-  const ws = wb.getWorksheet("Products") ?? wb.worksheets.find((w) => w.rowCount > 0);
-  if (!ws) return { error: "The workbook has no sheet with data." };
-  const rows: string[][] = [];
-  const width = ws.columnCount;
-  ws.eachRow({ includeEmpty: true }, (row, n) => {
-    const out: string[] = [];
-    for (let c = 1; c <= width; c++) out.push(cellText(row.getCell(c).value));
-    rows[n - 1] = out;
-  });
-  return Array.from(rows, (r) => r ?? []);
-}
-
-export async function readProductSheet(file: File): Promise<ParsedSheet> {
-  if (!file || file.size === 0) return { error: "Choose a file to upload." };
-  if (file.size > MAX_SHEET_BYTES) return { error: "That file is over 4 MB. Split it into smaller files." };
-  const name = file.name.toLowerCase();
-  let grid: string[][];
-  if (name.endsWith(".xlsx")) {
-    const r = await readXlsx(await file.arrayBuffer());
-    if ("error" in r) return r;
-    grid = r;
-  } else if (name.endsWith(".csv") || name.endsWith(".txt")) {
-    grid = parseCsv((await file.text()).replace(/^﻿/, ""));
-  } else if (name.endsWith(".xls")) {
-    return { error: "Old .xls files aren't supported. In Excel use File → Save As → Excel Workbook (.xlsx), or CSV." };
-  } else {
-    return { error: "Upload an .xlsx or .csv file." };
-  }
-
+/** Maps the header row to template columns and turns the rest into rows. Cells must be strings. */
+export function readProductGrid(grid: string[][]): ParsedSheet {
   const headerIdx = grid.findIndex((r) => r.some((c) => c.trim() !== ""));
   if (headerIdx < 0) return { error: "The file is empty." };
   const header = grid[headerIdx];
@@ -180,7 +99,7 @@ export async function readProductSheet(file: File): Promise<ParsedSheet> {
   const rows: RawRow[] = [];
   for (let i = headerIdx + 1; i < grid.length; i++) {
     const r = grid[i] ?? [];
-    if (!r.some((c) => (c ?? "").trim() !== "")) continue;
+    if (!r.some((c) => c.trim() !== "")) continue;
     const cells: Partial<Record<Key, string>> = {};
     keys.forEach((k, ci) => {
       if (k) cells[k] = (r[ci] ?? "").trim();
@@ -189,7 +108,9 @@ export async function readProductSheet(file: File): Promise<ParsedSheet> {
   }
   if (rows.length === 0) return { error: "No product rows under the header row." };
   if (rows.length > MAX_SHEET_ROWS) {
-    return { error: `That's ${rows.length.toLocaleString()} rows; the limit is ${MAX_SHEET_ROWS.toLocaleString()} per file. Split it up.` };
+    return {
+      error: `That's ${rows.length.toLocaleString()} rows; the limit is ${MAX_SHEET_ROWS.toLocaleString()} per file. Split it up.`,
+    };
   }
   return { rows, unknownHeaders };
 }
@@ -205,12 +126,12 @@ type ProductFields = {
   name?: string;
   priceCents?: number;
   listPriceCents?: number | null;
-  categoryId?: string;
-  brandKey?: string; // normalized brand name, resolved to an id at apply time
+  categoryId?: string | null;
+  brandKey?: string | null; // normalized brand name, resolved to an id at apply time; null = no brand
   isActive?: boolean;
-  description?: string;
-  highlights?: string;
-  keywords?: string;
+  description?: string | null;
+  highlights?: string | null;
+  keywords?: string | null;
 };
 
 type PlannedRow = {
@@ -291,7 +212,15 @@ async function categoryResolver() {
   };
 }
 
-export async function planProductSheet(rows: RawRow[]): Promise<SheetPlan> {
+const CLEARABLE = new Set<Key>(["listPrice", "category", "brand", "description", "highlights", "keywords", "images"]);
+const CLEAR = Symbol("clear");
+
+export type PlanOptions = {
+  /** On updates, an empty cell in a column the file has empties that field (for edited exports). */
+  blankClears?: boolean;
+};
+
+export async function planProductSheet(rows: RawRow[], options: PlanOptions = {}): Promise<SheetPlan> {
   const errors: SheetIssue[] = [];
   const warnings: SheetIssue[] = [];
 
@@ -359,7 +288,21 @@ export async function planProductSheet(rows: RawRow[]): Promise<SheetPlan> {
       else claimed.set(claimKey, line);
     }
 
-    // --- field values (blank = unchanged on updates)
+    // --- field values. Blank = unchanged on updates; [clear] (or a blank, when
+    // blankClears is on) empties a field that is allowed to be empty.
+    for (const [k, v] of Object.entries(cells) as [Key, string][]) {
+      if (CLEAR_RE.test(v) && !CLEARABLE.has(k)) {
+        err(k, `${header(k)} can't be cleared.`);
+        cells[k] = "";
+      }
+    }
+    const val = (k: Key): string | typeof CLEAR => {
+      const v = get(k);
+      if (!CLEARABLE.has(k)) return v;
+      if (CLEAR_RE.test(v)) return action === "update" ? CLEAR : "";
+      if (!v && options.blankClears && action === "update" && k in cells) return CLEAR;
+      return v;
+    };
     const fields: ProductFields = {};
     const changes: string[] = [];
     if (part) {
@@ -388,8 +331,11 @@ export async function planProductSheet(rows: RawRow[]): Promise<SheetPlan> {
       }
     } else if (action === "create") err("price", "Price is required for a new product.");
 
-    const list = get("listPrice");
-    if (list) {
+    const list = val("listPrice");
+    if (list === CLEAR) {
+      fields.listPriceCents = null;
+      changes.push("list price cleared");
+    } else if (list) {
       const cents = money(list);
       if (cents === null) err("listPrice", `List price "${list}" isn't a valid dollar amount.`);
       else {
@@ -412,8 +358,11 @@ export async function planProductSheet(rows: RawRow[]): Promise<SheetPlan> {
       }
     }
 
-    const cat = get("category");
-    if (cat) {
+    const cat = val("category");
+    if (cat === CLEAR) {
+      fields.categoryId = null;
+      changes.push("category cleared");
+    } else if (cat) {
       const r = resolveCategory(cat);
       if (r.error) err("category", r.error);
       else {
@@ -422,8 +371,11 @@ export async function planProductSheet(rows: RawRow[]): Promise<SheetPlan> {
       }
     }
 
-    const brand = get("brand");
-    if (brand) {
+    const brand = val("brand");
+    if (brand === CLEAR) {
+      fields.brandKey = null;
+      changes.push("brand cleared");
+    } else if (brand) {
       const k = norm(brand);
       if (!k) err("brand", "Brand name has no letters or numbers.");
       else {
@@ -443,22 +395,23 @@ export async function planProductSheet(rows: RawRow[]): Promise<SheetPlan> {
       }
     }
 
-    for (const k of ["description", "keywords"] as const) {
-      const v = get(k);
-      if (v) {
-        fields[k] = v;
+    for (const k of ["description", "keywords", "highlights"] as const) {
+      const v = val(k);
+      if (v === CLEAR) {
+        fields[k] = null;
+        changes.push(`${k} cleared`);
+      } else if (v) {
+        fields[k] = k === "highlights" ? highlightsText(v) : v;
         changes.push(k);
       }
     }
-    const hl = get("highlights");
-    if (hl) {
-      fields.highlights = highlightsText(hl);
-      changes.push("highlights");
-    }
 
     let images: string[] | undefined;
-    const img = get("images");
-    if (img) {
+    const img = val("images");
+    if (img === CLEAR) {
+      images = [];
+      changes.push("images removed");
+    } else if (img) {
       const { urls, bad } = parseImages(img);
       if (bad.length) err("images", `Not an image link: "${bad[0].slice(0, 60)}". Links must start with https://`);
       else {
@@ -526,7 +479,8 @@ export async function applyProductSheet(plan: SheetPlan): Promise<{ created: num
       brandId.set(norm(b.slug), b.id);
       brandId.set(norm(b.name), b.id);
     }
-    const brandOf = (f: ProductFields) => (f.brandKey ? (brandId.get(f.brandKey) ?? null) : undefined);
+    const brandOf = (f: ProductFields) =>
+      f.brandKey === undefined ? undefined : f.brandKey === null ? null : (brandId.get(f.brandKey) ?? null);
 
     // New products, with unique slugs.
     if (creates.length) {
@@ -746,6 +700,8 @@ async function toXlsx(rows: SheetRow[], cats: string[], forTemplate: boolean): P
     "Fill one row per part on the Products sheet. Delete the example rows first.",
     "A part number that already exists UPDATES that product; a new part number ADDS a product.",
     "When updating, leave a cell blank to keep the current value; only filled-in cells change.",
+    `To empty a field (List Price, Category, Brand, Description, Highlights, Keywords, Image URLs), type ${CLEAR_MARKER} in the cell.`,
+    "Uploading an edited export? Tick 'Empty cells clear the field' on the upload page, so cells you emptied are cleared too.",
     "To edit many existing products: Admin → Products → Bulk Upload → Export all products, change the cells, upload it back.",
     "Upload shows every problem first (row and column); nothing is saved until you press Import.",
   ]) {

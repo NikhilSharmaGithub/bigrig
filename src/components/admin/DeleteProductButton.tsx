@@ -15,7 +15,7 @@ export function DeleteProductButton({
           `Delete "${name}" permanently?\n\n` +
             "Its photos, stock, reviews, questions and wishlist/cart entries are removed too. " +
             "Past orders keep their line items.\n\n" +
-            "If you might sell it again, use Hide instead.",
+            "If you might sell it again, hide it instead (Hide, or untick Active).",
         );
         if (!ok) e.preventDefault();
       }}

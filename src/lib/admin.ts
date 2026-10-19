@@ -1,6 +1,7 @@
 import "server-only";
-import { and, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/db";
+import { PRODUCTS_PER_PAGE, exactPartFirst, pageWindow, productSearchWhere } from "@/lib/product-search";
 import {
   brands,
   categories,
@@ -43,7 +44,7 @@ export async function getAdminStats() {
   };
 }
 
-export const ADMIN_PRODUCTS_PER_PAGE = 50;
+export { PRODUCTS_PER_PAGE as ADMIN_PRODUCTS_PER_PAGE } from "@/lib/product-search";
 
 export type AdminProductFilters = {
   q?: string;
@@ -52,33 +53,12 @@ export type AdminProductFilters = {
   page?: number;
 };
 
-/** "ab-12 34" → "AB1234": part numbers are matched ignoring spaces, dashes and dots. */
-function partKey(s: string): string {
-  return s.toUpperCase().replace(/[^0-9A-Z]/g, "");
-}
-
-/**
- * One page of the admin product list. `q` matches part number (also with
- * spaces/dashes ignored), name and description; exact part-number hits sort first.
- */
+/** One page of the admin product list; exact part-number hits sort first. */
 export async function getAdminProducts(filters: AdminProductFilters = {}) {
-  const q = (filters.q ?? "").trim().slice(0, 100);
+  const q = filters.q ?? "";
   const conds: SQL[] = [];
-  if (q) {
-    const like = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
-    const key = partKey(q);
-    const anyOf = [
-      ilike(products.partNumber, like),
-      ilike(products.name, like),
-      ilike(products.description, like),
-    ];
-    if (key) {
-      anyOf.push(
-        sql`regexp_replace(upper(${products.partNumber}), '[^0-9A-Z]', '', 'g') LIKE ${`%${key}%`}`,
-      );
-    }
-    conds.push(or(...anyOf)!);
-  }
+  const search = productSearchWhere(q);
+  if (search) conds.push(search);
   if (filters.categoryId) {
     // A parent category also matches everything filed under its subcategories.
     conds.push(
@@ -95,10 +75,8 @@ export async function getAdminProducts(filters: AdminProductFilters = {}) {
     .select({ total: sql<number>`count(*)::int` })
     .from(products)
     .where(where);
-  const pageCount = Math.max(1, Math.ceil(total / ADMIN_PRODUCTS_PER_PAGE));
-  const page = Math.min(Math.max(1, Math.floor(filters.page ?? 1)), pageCount);
+  const { page, pageCount, offset } = pageWindow(total, filters.page);
 
-  const key = partKey(q);
   const items = await db
     .select({
       id: products.id,
@@ -117,15 +95,9 @@ export async function getAdminProducts(filters: AdminProductFilters = {}) {
     .leftJoin(categories, eq(products.categoryId, categories.id))
     .leftJoin(inventory, eq(inventory.productId, products.id))
     .where(where)
-    .orderBy(
-      ...(key
-        ? [sql`(regexp_replace(upper(${products.partNumber}), '[^0-9A-Z]', '', 'g') = ${key}) DESC`]
-        : []),
-      desc(products.createdAt),
-      desc(products.id),
-    )
-    .limit(ADMIN_PRODUCTS_PER_PAGE)
-    .offset((page - 1) * ADMIN_PRODUCTS_PER_PAGE);
+    .orderBy(...exactPartFirst(q), desc(products.createdAt), desc(products.id))
+    .limit(PRODUCTS_PER_PAGE)
+    .offset(offset);
 
   return { items, total, page, pageCount };
 }

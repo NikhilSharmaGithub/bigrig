@@ -10,6 +10,7 @@ import {
   vendors,
 } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { PRODUCTS_PER_PAGE, exactPartFirst, pageWindow, productSearchWhere } from "@/lib/product-search";
 
 /** For vendor pages: returns the current user's store, or redirects. */
 export async function requireVendor() {
@@ -39,8 +40,23 @@ export async function getVendorBySlug(slug: string) {
   return db.query.vendors.findFirst({ where: eq(vendors.slug, slug) });
 }
 
-export async function getVendorProducts(vendorId: string) {
-  return db
+/** One page of a vendor's own products, optionally searched / filtered by status. */
+export async function getVendorProducts(
+  vendorId: string,
+  filters: { q?: string; status?: "active" | "hidden"; page?: number } = {},
+) {
+  const q = filters.q ?? "";
+  const where = and(
+    eq(products.vendorId, vendorId),
+    productSearchWhere(q),
+    filters.status ? eq(products.isActive, filters.status === "active") : undefined,
+  );
+  const [{ total }] = await db
+    .select({ total: sql<number>`count(*)::int` })
+    .from(products)
+    .where(where);
+  const { page, pageCount, offset } = pageWindow(total, filters.page);
+  const items = await db
     .select({
       id: products.id,
       slug: products.slug,
@@ -52,8 +68,11 @@ export async function getVendorProducts(vendorId: string) {
     })
     .from(products)
     .leftJoin(inventory, eq(inventory.productId, products.id))
-    .where(eq(products.vendorId, vendorId))
-    .orderBy(desc(products.createdAt));
+    .where(where)
+    .orderBy(...exactPartFirst(q), desc(products.createdAt), desc(products.id))
+    .limit(PRODUCTS_PER_PAGE)
+    .offset(offset);
+  return { items, total, page, pageCount };
 }
 
 export async function getVendorProductById(vendorId: string, id: string) {
