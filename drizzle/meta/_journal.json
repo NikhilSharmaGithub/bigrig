@@ -43,6 +43,13 @@
       "when": 1792281502492,
       "tag": "0005_category_cleanup",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1794006587661,
+      "tag": "0006_soft_delete_columns",
+      "breakpoints": true
     }
   ]
 }

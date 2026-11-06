@@ -37,9 +37,6 @@ export const metadata: Metadata = {
       noimageindex: false,
     },
   },
-  verification: {
-    google: "YOUR_GOOGLE_VERIFICATION_CODE",
-  },
   keywords: [
     "truck parts",
     "trailer parts",

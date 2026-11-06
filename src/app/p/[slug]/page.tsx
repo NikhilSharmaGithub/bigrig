@@ -153,18 +153,6 @@ export default async function ProductPage({ params }: Props) {
         : "https://schema.org/BackOrder",
       url: `${SITE.url}/p/${product.slug}`,
       ...(product.vendor ? { seller: { "@type": "Organization", name: product.vendor.storeName } } : {}),
-      shippingDetails: {
-        "@type": "OfferShippingDetails",
-        shippingRate: {
-          "@type": "MonetaryAmount",
-          value: "0",
-          currency: "USD",
-        },
-        shippingDestination: {
-          "@type": "DefinedRegion",
-          addressCountry: "US",
-        },
-      },
     },
   };
 

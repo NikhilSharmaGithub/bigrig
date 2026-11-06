@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { categories, topBrands, truckMakes } from "@/lib/catalog";
-import { brandLogos } from "@/lib/brand-logos";
 import { featuredProducts } from "@/lib/sample-products";
 import type { ProductCardItem } from "@/lib/types";
 import { getTopSellers, getDeals } from "@/lib/queries";
@@ -27,7 +26,7 @@ export default async function HomePage() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden bg-cover bg-center bg-no-repeat bg-[url('/hero-banner.png')] text-white">
+      <section className="relative overflow-hidden bg-steel-900 text-white">
         <div className="hazard-stripes absolute inset-x-0 top-0 h-1.5" />
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 lg:grid-cols-2 lg:items-center lg:py-20">
           <div>
@@ -85,18 +84,21 @@ export default async function HomePage() {
       {/* Shop by category */}
       <section className="mx-auto max-w-7xl px-4 py-12">
         <SectionHeading title="Shop by Category" href="/c" linkLabel="View all" />
-        <div className="mt-6 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-3">
           {categories.map((cat) => (
             <Link
               key={cat.slug}
               href={`/c/${cat.slug}`}
-              className="group flex flex-col items-center text-center rounded-xl border border-border bg-white p-4 transition-all hover:border-brand hover:shadow-lg"
+              className="group flex items-start gap-4 rounded-lg border border-border bg-white p-5 transition-all hover:border-brand hover:shadow-md"
             >
-              <div className="grid h-24 w-24 shrink-0 place-items-center rounded-lg bg-surface p-2 transition-transform group-hover:scale-105">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-md bg-steel-900 text-white transition-colors group-hover:bg-brand">
                 <CategoryGlyph />
-              </div>
-              <span className="font-display mt-3 text-sm font-bold leading-tight text-steel-900 group-hover:text-brand">
-                {cat.name}
+              </span>
+              <span>
+                <span className="font-display block font-bold text-steel-900 group-hover:text-brand">
+                  {cat.name}
+                </span>
+                <span className="mt-0.5 block text-xs text-steel-500">{cat.blurb}</span>
               </span>
             </Link>
           ))}
@@ -127,27 +129,17 @@ export default async function HomePage() {
         </section>
       )}
 
-import { brandLogos } from "@/lib/brand-logos";
-// ... (rest of imports)
-
-// ... (in HomePage component)
       {/* Top brands */}
       <section className="mx-auto max-w-7xl px-4 py-12">
         <SectionHeading title="Top Brands" href="/brands" linkLabel="All brands" />
         <div className="mt-6 grid grid-cols-3 gap-4 sm:grid-cols-4 lg:grid-cols-6">
-          {brandLogos.map((b) => (
+          {topBrands.map((b) => (
             <Link
               key={b.slug}
               href={`/brands/${b.slug}`}
-              className="flex h-20 items-center justify-center rounded-lg border border-border bg-white px-4 transition-all hover:border-brand hover:shadow-md"
+              className="flex h-20 items-center justify-center rounded-lg border border-border bg-white px-4 text-center font-display text-lg font-bold text-steel-700 transition-all hover:border-brand hover:text-brand hover:shadow-md"
             >
-              {b.imagePath ? (
-                <img src={b.imagePath} alt={b.name} className="max-h-12 w-auto object-contain" />
-              ) : (
-                <span className="text-center font-display text-lg font-bold text-steel-700 hover:text-brand">
-                  {b.name}
-                </span>
-              )}
+              {b.name}
             </Link>
           ))}
         </div>
