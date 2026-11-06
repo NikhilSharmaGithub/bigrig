@@ -74,6 +74,8 @@ export const brands = pgTable("brands", {
   name: text("name").notNull(),
   logoUrl: text("logo_url"),
   description: text("description"),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletedBy: uuid("deleted_by"),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -112,6 +114,8 @@ export const products = pgTable(
       .default("0"),
     ratingCount: integer("rating_count").notNull().default(0),
     isActive: boolean("is_active").notNull().default(true),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedBy: uuid("deleted_by"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

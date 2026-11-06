@@ -43,3 +43,6 @@ next-env.d.ts
 # Uploaded files (use Blob/S3 in production)
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# Local Netlify folder
+.netlify

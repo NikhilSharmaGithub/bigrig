@@ -28,6 +28,18 @@ export const metadata: Metadata = {
   },
   description: SITE.description,
   applicationName: SITE.name,
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      noimageindex: false,
+    },
+  },
+  verification: {
+    google: "YOUR_GOOGLE_VERIFICATION_CODE",
+  },
   keywords: [
     "truck parts",
     "trailer parts",

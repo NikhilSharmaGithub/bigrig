@@ -146,11 +146,25 @@ export default async function ProductPage({ params }: Props) {
       "@type": "Offer",
       priceCurrency: "USD",
       price: (product.priceCents / 100).toFixed(2),
+      priceValidUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0],
+      itemCondition: "https://schema.org/NewCondition",
       availability: inStock
         ? "https://schema.org/InStock"
         : "https://schema.org/BackOrder",
       url: `${SITE.url}/p/${product.slug}`,
       ...(product.vendor ? { seller: { "@type": "Organization", name: product.vendor.storeName } } : {}),
+      shippingDetails: {
+        "@type": "OfferShippingDetails",
+        shippingRate: {
+          "@type": "MonetaryAmount",
+          value: "0",
+          currency: "USD",
+        },
+        shippingDestination: {
+          "@type": "DefinedRegion",
+          addressCountry: "US",
+        },
+      },
     },
   };
 
@@ -327,12 +341,12 @@ export default async function ProductPage({ params }: Props) {
               <h2 className="font-display border-b-2 border-steel-900 pb-2 text-xl font-bold uppercase tracking-wide text-steel-900">
                 Specifications
               </h2>
-              <table className="mt-3 w-full text-sm">
+              <table className="mt-3 w-full text-sm border-t border-border">
                 <tbody>
-                  {product.specs.map((s) => (
-                    <tr key={s.id} className="border-b border-border">
-                      <th className="w-1/3 py-2.5 text-left font-medium text-steel-500">{s.name}</th>
-                      <td className="py-2.5 text-steel-900">{s.value}</td>
+                  {product.specs.map((s, idx) => (
+                    <tr key={s.id} className={`${idx % 2 === 0 ? 'bg-surface' : 'bg-white'} border-b border-border`}>
+                      <th className="w-1/3 py-3 px-4 text-left font-semibold text-steel-700">{s.name}</th>
+                      <td className="py-3 px-4 text-steel-900">{s.value}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -347,11 +361,11 @@ export default async function ProductPage({ params }: Props) {
             Fits These Trucks
           </h2>
           {fitByMake.size > 0 ? (
-            <div className="mt-3 space-y-3">
+            <div className="mt-3 space-y-4">
               {[...fitByMake.entries()].map(([make, models]) => (
-                <div key={make} className="rounded-lg border border-border bg-surface p-3">
-                  <p className="font-display font-bold text-steel-900">{make}</p>
-                  <p className="mt-0.5 text-sm text-steel-600">{models.join(" · ")}</p>
+                <div key={make} className="rounded-lg border border-border bg-white shadow-sm overflow-hidden">
+                  <div className="bg-surface px-4 py-2 font-display font-bold text-steel-900 border-b border-border">{make}</div>
+                  <div className="px-4 py-3 text-sm text-steel-700 leading-relaxed">{models.join(" · ")}</div>
                 </div>
               ))}
             </div>
