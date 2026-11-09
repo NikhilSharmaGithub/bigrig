@@ -25,7 +25,8 @@ const COUNTED_REVENUE_STATUSES = [
 export async function getAdminStats() {
   const [p] = await db
     .select({ n: sql<number>`count(*)::int` })
-    .from(products);
+    .from(products)
+    .where(sql`${products.deletedAt} IS NULL`);
   const [o] = await db.select({ n: sql<number>`count(*)::int` }).from(orders);
   const [rev] = await db
     .select({ n: sql<number>`COALESCE(SUM(${orders.totalCents}), 0)::int` })
@@ -69,6 +70,8 @@ export async function getAdminProducts(filters: AdminProductFilters = {}) {
     );
   }
   if (filters.status) conds.push(eq(products.isActive, filters.status === "active"));
+  // Filter out soft-deleted products
+  conds.push(sql`${products.deletedAt} IS NULL`);
   const where = conds.length ? and(...conds) : undefined;
 
   const [{ total }] = await db
@@ -119,7 +122,7 @@ export async function getCategoryFilterOptions() {
 
 export async function getAdminProductById(id: string) {
   return db.query.products.findFirst({
-    where: eq(products.id, id),
+    where: and(eq(products.id, id), sql`${products.deletedAt} IS NULL`),
     with: {
       inventory: true,
       images: { orderBy: (i, { asc }) => asc(i.position) },

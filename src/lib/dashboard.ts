@@ -28,7 +28,7 @@ export async function getDashboardData() {
 
   const [productCount, vendorCount, customerCount, unreadMessages, lowStockCount, newCustomers30d] =
     await Promise.all([
-      scalar(db.select({ n: sql<number>`count(*)::int` }).from(products)),
+      scalar(db.select({ n: sql<number>`count(*)::int` }).from(products).where(sql`${products.deletedAt} IS NULL`)),
       scalar(db.select({ n: sql<number>`count(*)::int` }).from(vendors)),
       scalar(db.select({ n: sql<number>`count(*)::int` }).from(users)),
       scalar(
@@ -41,7 +41,8 @@ export async function getDashboardData() {
         db
           .select({ n: sql<number>`count(*)::int` })
           .from(inventory)
-          .where(sql`${inventory.quantity} < 10`),
+          .innerJoin(products, eq(inventory.productId, products.id))
+          .where(sql`${inventory.quantity} < 10 AND ${products.deletedAt} IS NULL`),
       ),
       scalar(
         db
@@ -102,7 +103,7 @@ export async function getDashboardData() {
     })
     .from(products)
     .innerJoin(inventory, eq(inventory.productId, products.id))
-    .where(sql`${inventory.quantity} < 10`)
+    .where(sql`${inventory.quantity} < 10 AND ${products.deletedAt} IS NULL`)
     .orderBy(inventory.quantity)
     .limit(8);
 

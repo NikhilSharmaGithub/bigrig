@@ -48,6 +48,7 @@ export async function getVendorProducts(
   const q = filters.q ?? "";
   const where = and(
     eq(products.vendorId, vendorId),
+    sql`${products.deletedAt} IS NULL`,
     productSearchWhere(q),
     filters.status ? eq(products.isActive, filters.status === "active") : undefined,
   );
@@ -77,7 +78,7 @@ export async function getVendorProducts(
 
 export async function getVendorProductById(vendorId: string, id: string) {
   return db.query.products.findFirst({
-    where: and(eq(products.id, id), eq(products.vendorId, vendorId)),
+    where: and(eq(products.id, id), eq(products.vendorId, vendorId), sql`${products.deletedAt} IS NULL`),
     with: {
       inventory: true,
       images: { orderBy: (i, { asc }) => asc(i.position) },
@@ -89,7 +90,7 @@ export async function getVendorStats(vendorId: string) {
   const [p] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(products)
-    .where(eq(products.vendorId, vendorId));
+    .where(and(eq(products.vendorId, vendorId), sql`${products.deletedAt} IS NULL`));
 
   const [sold] = await db
     .select({

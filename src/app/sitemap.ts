@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { categories, products } from "@/db/schema";
 import { SITE } from "@/lib/site";
@@ -61,7 +61,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const prods = await db
       .select({ slug: products.slug, updatedAt: products.updatedAt })
       .from(products)
-      .where(eq(products.isActive, true));
+      .where(and(eq(products.isActive, true), isNull(products.deletedAt)));
     const productEntries = prods.map(
       (p): MetadataRoute.Sitemap[number] => ({
         url: `${base}/p/${p.slug}`,

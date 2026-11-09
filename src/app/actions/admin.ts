@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath, updateTag } from "next/cache";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import {
   brands,
@@ -231,8 +231,11 @@ export async function bulkSetCategoryAction(
  * past orders keep their line items because order_items snapshot name/part #/price (set null).
  */
 export async function deleteProductAction(id: string): Promise<void> {
-  await requireAdmin();
-  await db.delete(products).where(eq(products.id, id));
+  const admin = await requireAdmin();
+  await db
+    .update(products)
+    .set({ deletedAt: new Date(), deletedBy: admin.id })
+    .where(eq(products.id, id));
   revalidatePath("/admin/products");
   updateTag(NAV_CATEGORIES_TAG);
   revalidatePath("/", "layout");
@@ -482,10 +485,25 @@ export async function createBrandAction(
   return { ok: true };
 }
 
+/**
+ * Soft delete. As with the old hard delete, its products simply lose the brand, so
+ * no product links to a brand page that's gone. The slug is freed for a new brand.
+ */
 export async function deleteBrandAction(id: string): Promise<void> {
-  await requireAdmin();
-  await db.delete(brands).where(eq(brands.id, id));
+  const admin = await requireAdmin();
+  await db.transaction(async (tx) => {
+    await tx
+      .update(brands)
+      .set({
+        deletedAt: new Date(),
+        deletedBy: admin.id,
+        slug: sql`${brands.slug} || '-deleted-' || left(${brands.id}::text, 8)`,
+      })
+      .where(and(eq(brands.id, id), isNull(brands.deletedAt)));
+    await tx.update(products).set({ brandId: null }).where(eq(products.brandId, id));
+  });
   revalidatePath("/admin/brands");
+  revalidatePath("/", "layout");
 }
 
 export async function updateStoreSettingsAction(

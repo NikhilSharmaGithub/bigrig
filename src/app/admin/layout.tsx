@@ -21,6 +21,7 @@ const NAV = [
   { href: "/admin/categories", label: "Categories" },
   { href: "/admin/brands", label: "Brands" },
   { href: "/admin/settings", label: "Settings" },
+  { href: "/admin/revenue-calculator", label: "Revenue Calculator" },
 ];
 
 export default async function AdminLayout({

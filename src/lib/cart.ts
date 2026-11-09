@@ -1,7 +1,7 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { brands, cartItems, carts, inventory, products } from "@/db/schema";
 import { getSession } from "@/lib/auth";
@@ -102,7 +102,7 @@ export async function getCart(): Promise<CartView> {
     .leftJoin(brands, eq(products.brandId, brands.id))
     .leftJoin(inventory, eq(inventory.productId, products.id))
     // hidden (admin) or suspended-vendor products must not reach checkout
-    .where(and(eq(cartItems.cartId, cart.id), eq(products.isActive, true)));
+    .where(and(eq(cartItems.cartId, cart.id), eq(products.isActive, true), sql`${products.deletedAt} IS NULL`));
 
   const items: CartLine[] = rows.map((r) => ({
     productId: r.productId,
@@ -132,7 +132,7 @@ export async function getCartCount(): Promise<number> {
 
 export async function addItemBySlug(slug: string, qty: number): Promise<void> {
   const product = await db.query.products.findFirst({
-    where: and(eq(products.slug, slug), eq(products.isActive, true)),
+    where: and(eq(products.slug, slug), eq(products.isActive, true), sql`${products.deletedAt} IS NULL`),
     columns: { id: true },
   });
   if (!product) throw new Error("Product not found");
