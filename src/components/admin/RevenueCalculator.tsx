@@ -34,35 +34,29 @@ export function RevenueCalculator({
 }: {
   initialProducts: CalcProduct[];
 }) {
-  const [session, setSession] = useState<CalcSessionState>(DEFAULT_STATE);
-  const [selectedProductId, setSelectedProductId] = useState<string>("");
-  const [search, setSearch] = useState("");
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  // Restore session from localStorage on mount
-  useEffect(() => {
+  const [session, setSession] = useState<CalcSessionState>(() => {
+    if (typeof window === "undefined") return DEFAULT_STATE;
     try {
       const saved = localStorage.getItem(SESSION_KEY);
       if (saved) {
-        const parsed = JSON.parse(saved);
-        setSession({ ...DEFAULT_STATE, ...parsed });
+        return { ...DEFAULT_STATE, ...JSON.parse(saved) };
       }
     } catch (e) {
       console.error("Failed to restore calculator session:", e);
-    } finally {
-      setIsLoaded(true);
     }
-  }, []);
+    return DEFAULT_STATE;
+  });
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [search, setSearch] = useState("");
 
   // Save session state to localStorage on every change
   useEffect(() => {
-    if (!isLoaded) return;
     try {
       localStorage.setItem(SESSION_KEY, JSON.stringify(session));
     } catch (e) {
       console.error("Failed to save calculator session:", e);
     }
-  }, [session, isLoaded]);
+  }, [session]);
 
   const addProductToCalc = (p: CalcProduct) => {
     if (session.items[p.id]) return;
@@ -148,7 +142,7 @@ export function RevenueCalculator({
       : 0;
   const totalShippingIncomeCents =
     estimatedOrders * session.shippingPerOrderCents;
-  const totalCombinedRevenueCents =
+  const _totalCombinedRevenueCents =
     totalGrossRevCents + totalShippingIncomeCents;
   const netProfitCents =
     totalGrossRevCents -
