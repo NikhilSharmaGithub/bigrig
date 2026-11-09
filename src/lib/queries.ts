@@ -199,7 +199,7 @@ export async function listProducts(opts: ListOpts): Promise<ProductListResult> {
 
   try {
     // Conditions that apply to BOTH results and brand facets (everything but brand).
-    const baseConds = [eq(products.isActive, true)];
+    const baseConds = [eq(products.isActive, true), sql`${products.deletedAt} IS NULL`];
 
     if (opts.categorySlug) {
       const ids = await categoryAndChildIds(opts.categorySlug);
@@ -329,7 +329,7 @@ function toCardItem(r: ListRow): ProductCardItem {
 
 export async function getProductBySlug(slug: string) {
   return db.query.products.findFirst({
-    where: eq(products.slug, slug),
+    where: and(eq(products.slug, slug), sql`${products.deletedAt} IS NULL`),
     with: {
       brand: true,
       category: { with: { parent: true } },
@@ -372,6 +372,7 @@ export async function getRelatedProducts(
       and(
         eq(products.categoryId, categoryId),
         eq(products.isActive, true),
+        sql`${products.deletedAt} IS NULL`,
         sql`${products.slug} <> ${excludeSlug}`,
       ),
     )
@@ -399,7 +400,7 @@ export async function getTopSellers(limit = 6): Promise<ProductCardItem[]> {
         .from(products)
         .leftJoin(brands, eq(products.brandId, brands.id))
         .leftJoin(inventory, eq(inventory.productId, products.id))
-        .where(eq(products.isActive, true))
+        .where(and(eq(products.isActive, true), sql`${products.deletedAt} IS NULL`))
         .orderBy(desc(products.ratingCount))
         .limit(limit);
       return rows.map(toCardItem);
@@ -430,7 +431,7 @@ export async function getProductCardsBySlugs(
     .from(products)
     .leftJoin(brands, eq(products.brandId, brands.id))
     .leftJoin(inventory, eq(inventory.productId, products.id))
-    .where(and(eq(products.isActive, true), inArray(products.slug, slugs)));
+    .where(and(eq(products.isActive, true), sql`${products.deletedAt} IS NULL`, inArray(products.slug, slugs)));
   const map = new Map(rows.map((r) => [r.slug, toCardItem(r)]));
   return slugs
     .map((s) => map.get(s))
@@ -455,7 +456,7 @@ export async function getFrequentlyBoughtTogether(
     )
     .innerJoin(
       products,
-      and(eq(products.id, oi2.productId), eq(products.isActive, true)),
+      and(eq(products.id, oi2.productId), eq(products.isActive, true), sql`${products.deletedAt} IS NULL`),
     )
     .where(eq(orderItems.productId, productId))
     .groupBy(products.slug)
@@ -486,6 +487,7 @@ export async function getDeals(limit = 24): Promise<ProductCardItem[]> {
         .where(
           and(
             eq(products.isActive, true),
+            sql`${products.deletedAt} IS NULL`,
             isNotNull(products.listPriceCents),
             gt(products.listPriceCents, products.priceCents),
           ),
@@ -509,14 +511,16 @@ export async function getDeals(limit = 24): Promise<ProductCardItem[]> {
 
 export async function getAllBrands() {
   return safeQuery(
-    () => db.select().from(brands).orderBy(asc(brands.name)),
+    () => db.select().from(brands).where(sql`${brands.deletedAt} IS NULL`).orderBy(asc(brands.name)),
     [],
     "getAllBrands",
   );
 }
 
 export async function getBrandBySlug(slug: string) {
-  return db.query.brands.findFirst({ where: eq(brands.slug, slug) });
+  return db.query.brands.findFirst({
+    where: and(eq(brands.slug, slug), sql`${brands.deletedAt} IS NULL`),
+  });
 }
 
 /* -------------------------------------------------------------------------- */

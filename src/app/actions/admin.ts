@@ -232,7 +232,10 @@ export async function bulkSetCategoryAction(
  */
 export async function deleteProductAction(id: string): Promise<void> {
   await requireAdmin();
-  await db.delete(products).where(eq(products.id, id));
+  await db
+    .update(products)
+    .set({ deletedAt: new Date() })
+    .where(eq(products.id, id));
   revalidatePath("/admin/products");
   updateTag(NAV_CATEGORIES_TAG);
   revalidatePath("/", "layout");
