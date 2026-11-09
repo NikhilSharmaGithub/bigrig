@@ -195,10 +195,10 @@ export async function updateVendorProductAction(
 }
 
 export async function deleteVendorProductAction(id: string): Promise<void> {
-  const { vendor } = await requireVendor();
+  const { user, vendor } = await requireVendor();
   await db
     .update(products)
-    .set({ deletedAt: new Date() })
+    .set({ deletedAt: new Date(), deletedBy: user.id })
     .where(and(eq(products.id, id), eq(products.vendorId, vendor.id)));
   revalidatePath("/vendor/products");
 }

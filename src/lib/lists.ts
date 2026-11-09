@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { inventory, products, shoppingListItems, shoppingLists } from "@/db/schema";
 import { primaryImageSql } from "@/lib/queries";
@@ -30,10 +30,11 @@ export async function getListSummaries(userId: string): Promise<ListSummary[]> {
     .select({
       id: shoppingLists.id,
       name: shoppingLists.name,
-      count: sql<number>`COUNT(${shoppingListItems.id})::int`,
+      count: sql<number>`COUNT(${shoppingListItems.id}) FILTER (WHERE ${products.deletedAt} IS NULL)::int`,
     })
     .from(shoppingLists)
     .leftJoin(shoppingListItems, eq(shoppingListItems.listId, shoppingLists.id))
+    .leftJoin(products, eq(shoppingListItems.productId, products.id))
     .where(eq(shoppingLists.userId, userId))
     .groupBy(shoppingLists.id)
     .orderBy(asc(shoppingLists.position), asc(shoppingLists.createdAt));
@@ -74,7 +75,7 @@ export async function getListsWithItems(userId: string): Promise<ListView[]> {
     .from(shoppingListItems)
     .innerJoin(products, eq(shoppingListItems.productId, products.id))
     .leftJoin(inventory, eq(inventory.productId, products.id))
-    .where(inArray(shoppingListItems.listId, lists.map((l) => l.id)))
+    .where(and(inArray(shoppingListItems.listId, lists.map((l) => l.id)), isNull(products.deletedAt)))
     .orderBy(asc(shoppingListItems.addedAt));
 
   return lists.map((list) => {
@@ -113,7 +114,7 @@ export async function ownedList(userId: string, listId: string) {
 export async function ownedItem(userId: string, itemId: string) {
   const item = await db.query.shoppingListItems.findFirst({
     where: eq(shoppingListItems.id, itemId),
-    with: { list: true, product: { columns: { slug: true, isActive: true } } },
+    with: { list: true, product: { columns: { slug: true, isActive: true, deletedAt: true } } },
   });
   return item && item.list.userId === userId ? item : null;
 }

@@ -29,6 +29,8 @@ const DEFAULT_STATE: CalcSessionState = {
   monthlyFixedCostsCents: 0,
 };
 
+const MAX_OPTIONS = 200;
+
 export function RevenueCalculator({
   initialProducts,
 }: {
@@ -258,8 +260,11 @@ export function RevenueCalculator({
                 onChange={(e) => setSelectedProductId(e.target.value)}
                 className="w-full rounded-md border border-border px-3 py-2 text-sm focus:border-brand focus:outline-none"
               >
-                <option value="">-- Choose a part ({filteredProducts.length} available) --</option>
-                {filteredProducts.map((p) => (
+                <option value="">
+                  -- Choose a part ({filteredProducts.length.toLocaleString()} match
+                  {filteredProducts.length > MAX_OPTIONS ? `, first ${MAX_OPTIONS} shown, search to narrow` : ""}) --
+                </option>
+                {filteredProducts.slice(0, MAX_OPTIONS).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name} ({p.partNumber}) - {formatPrice(p.priceCents)}
                   </option>

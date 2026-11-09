@@ -84,7 +84,7 @@ const loadNavCategories = unstable_cache(
         slug: categories.slug,
         name: categories.name,
         parentId: categories.parentId,
-        count: sql<number>`COUNT(${products.id}) FILTER (WHERE ${products.isActive})::int`,
+        count: sql<number>`COUNT(${products.id}) FILTER (WHERE ${products.isActive} AND ${products.deletedAt} IS NULL)::int`,
       })
       .from(categories)
       .leftJoin(products, eq(products.categoryId, categories.id))

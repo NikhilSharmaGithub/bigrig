@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { products, shoppingListItems, shoppingLists } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
@@ -46,7 +46,7 @@ export async function addToListAction(
   if (!user) return { needsAuth: true };
 
   const product = await db.query.products.findFirst({
-    where: and(eq(products.slug, slug), eq(products.isActive, true)),
+    where: and(eq(products.slug, slug), eq(products.isActive, true), isNull(products.deletedAt)),
     columns: { id: true },
   });
   if (!product) return { error: "This part isn't available." };
@@ -129,7 +129,7 @@ export async function moveItemToCartAction(itemId: string): Promise<void> {
   const user = await getCurrentUser();
   if (!user) return;
   const item = await ownedItem(user.id, itemId);
-  if (!item || !item.product.isActive) return;
+  if (!item || !item.product.isActive || item.product.deletedAt) return;
   await addItemBySlug(item.product.slug, item.quantity);
   await db.delete(shoppingListItems).where(eq(shoppingListItems.id, itemId));
   refresh();
@@ -141,10 +141,10 @@ export async function moveListToCartAction(listId: string): Promise<void> {
   if (!user || !(await ownedList(user.id, listId))) return;
   const items = await db.query.shoppingListItems.findMany({
     where: eq(shoppingListItems.listId, listId),
-    with: { product: { columns: { slug: true, isActive: true } } },
+    with: { product: { columns: { slug: true, isActive: true, deletedAt: true } } },
   });
   for (const item of items) {
-    if (!item.product.isActive) continue;
+    if (!item.product.isActive || item.product.deletedAt) continue;
     await addItemBySlug(item.product.slug, item.quantity);
     await db.delete(shoppingListItems).where(eq(shoppingListItems.id, item.id));
   }

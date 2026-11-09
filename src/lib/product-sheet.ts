@@ -260,8 +260,13 @@ export async function planProductSheet(rows: RawRow[], options: PlanOptions = {}
       .select({ id: products.id, partNumber: products.partNumber, name: products.name })
       .from(products)
       // Admin uploads cover the store's own products; vendors' listings are theirs to edit.
-      .where(options.vendorId ? eq(products.vendorId, options.vendorId) : isNull(products.vendorId)),
-    db.select({ id: brands.id, slug: brands.slug, name: brands.name }).from(brands),
+      .where(
+        and(
+          isNull(products.deletedAt),
+          options.vendorId ? eq(products.vendorId, options.vendorId) : isNull(products.vendorId),
+        ),
+      ),
+    db.select({ id: brands.id, slug: brands.slug, name: brands.name }).from(brands).where(isNull(brands.deletedAt)),
     categoryResolver(),
   ]);
   const byId = new Map(existing.map((p) => [p.id, p]));
@@ -546,7 +551,10 @@ export async function applyProductSheet(plan: SheetPlan): Promise<{ created: num
       await tx.insert(brands).values(values).onConflictDoNothing();
     }
     const brandId = new Map<string, string>();
-    for (const b of await tx.select({ id: brands.id, slug: brands.slug, name: brands.name }).from(brands)) {
+    for (const b of await tx
+      .select({ id: brands.id, slug: brands.slug, name: brands.name })
+      .from(brands)
+      .where(isNull(brands.deletedAt))) {
       brandId.set(norm(b.slug), b.id);
       brandId.set(norm(b.name), b.id);
     }
@@ -592,7 +600,7 @@ export async function applyProductSheet(plan: SheetPlan): Promise<{ created: num
           if (b !== undefined) set.brandId = b;
           // The vendor check repeats the plan's scoping, so a vendor can only ever touch their own rows.
           const own = plan.vendorId ? eq(products.vendorId, plan.vendorId) : isNull(products.vendorId);
-          return tx.update(products).set(set).where(and(eq(products.id, r.productId), own));
+          return tx.update(products).set(set).where(and(eq(products.id, r.productId), own, isNull(products.deletedAt)));
         }),
       );
     }
@@ -691,7 +699,7 @@ async function exportRows(vendorId?: string): Promise<SheetRow[]> {
     .leftJoin(brands, eq(products.brandId, brands.id))
     .leftJoin(categories, eq(products.categoryId, categories.id))
     .leftJoin(inventory, eq(inventory.productId, products.id))
-    .where(vendorId ? eq(products.vendorId, vendorId) : isNull(products.vendorId))
+    .where(and(isNull(products.deletedAt), vendorId ? eq(products.vendorId, vendorId) : isNull(products.vendorId)))
     .orderBy(products.partNumber);
   return rows.map((r) => ({
     id: r.id,
@@ -722,7 +730,7 @@ function toCsv(rows: SheetRow[]): string {
 }
 
 async function brandChoices(): Promise<string[]> {
-  const rows = await db.select({ name: brands.name }).from(brands).orderBy(brands.name);
+  const rows = await db.select({ name: brands.name }).from(brands).where(isNull(brands.deletedAt)).orderBy(brands.name);
   return rows.map((b) => b.name);
 }
 

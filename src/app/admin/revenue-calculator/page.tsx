@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { RevenueCalculator } from "@/components/admin/RevenueCalculator";
+import { RevenueCalculatorLoader } from "@/components/admin/RevenueCalculatorLoader";
 import { getAdminProductsForCalc } from "@/lib/revenue-calc";
 
 export const metadata: Metadata = { title: "Admin · Revenue Calculator" };
@@ -17,7 +17,7 @@ export default async function AdminRevenueCalculatorPage() {
       </p>
 
       <div className="mt-6">
-        <RevenueCalculator initialProducts={products} />
+        <RevenueCalculatorLoader initialProducts={products} />
       </div>
     </div>
   );

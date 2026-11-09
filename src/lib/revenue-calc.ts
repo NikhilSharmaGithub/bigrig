@@ -31,8 +31,7 @@ export async function getAdminProductsForCalc(): Promise<CalcProduct[]> {
     .leftJoin(categories, eq(products.categoryId, categories.id))
     .leftJoin(inventory, eq(products.id, inventory.productId))
     .where(and(eq(products.isActive, true), sql`${products.deletedAt} IS NULL`))
-    .orderBy(products.name)
-    .limit(200);
+    .orderBy(products.name);
 
   return rows;
 }
