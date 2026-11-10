@@ -6,6 +6,8 @@ import { AdminNav } from "@/components/admin/AdminNav";
 
 // Signed-in only: skip build-time prerendering (it only wastes database connections).
 export const dynamic = "force-dynamic";
+// Give heavy admin pages (dashboard, imports) room to finish on a slow database connection.
+export const maxDuration = 60;
 
 const NAV = [
   { href: "/admin", label: "Dashboard" },
