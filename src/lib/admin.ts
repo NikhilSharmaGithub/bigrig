@@ -60,7 +60,10 @@ export async function getAdminProducts(filters: AdminProductFilters = {}) {
   const conds: SQL[] = [];
   const search = productSearchWhere(q);
   if (search) conds.push(search);
-  if (filters.categoryId) {
+  if (filters.categoryId === "none") {
+    // Parts that aren't filed under any category yet.
+    conds.push(sql`${products.categoryId} IS NULL`);
+  } else if (filters.categoryId) {
     // A parent category also matches everything filed under its subcategories.
     conds.push(
       or(

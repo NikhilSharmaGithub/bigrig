@@ -79,6 +79,7 @@ export default async function AdminProductsPage({ searchParams }: Props) {
           className="rounded-md border border-border px-2 py-2 text-sm"
         >
           <option value="">All categories</option>
+          <option value="none">— No category yet —</option>
           {filterCategories.map((parent) => (
             <optgroup key={parent.id} label={parent.name}>
               <option value={parent.id}>All {parent.name}</option>
