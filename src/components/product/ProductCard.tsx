@@ -10,7 +10,7 @@ export function ProductCard({ product }: { product: ProductCardItem }) {
     <div className="group relative">
     <Link
       href={`/p/${product.slug}`}
-      className="flex flex-col overflow-hidden rounded-lg border border-border bg-white transition-shadow hover:shadow-lg"
+      className="flex flex-col overflow-hidden rounded-lg border border-border bg-white transition-all hover:border-steel-400 hover:shadow-lg"
     >
       <div className="relative aspect-square bg-white p-4">
         {product.imageUrl ? (
@@ -41,13 +41,13 @@ export function ProductCard({ product }: { product: ProductCardItem }) {
         )}
       </div>
       <div className="flex flex-1 flex-col p-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-brand">
+        <span className="font-display text-sm font-bold uppercase tracking-wider text-brand">
           {product.brand}
         </span>
-        <h3 className="mt-0.5 line-clamp-2 text-sm font-medium text-steel-900 group-hover:text-brand">
+        <h3 className="mt-0.5 line-clamp-2 text-sm font-semibold text-steel-900 group-hover:text-brand">
           {product.name}
         </h3>
-        <span className="mt-0.5 text-xs text-steel-500">#{product.partNumber}</span>
+        <span className="mt-0.5 font-mono text-xs text-steel-500">#{product.partNumber}</span>
 
         {product.ratingCount > 0 && (
           <div className="mt-1 flex items-center gap-1 text-xs text-steel-500">
@@ -58,7 +58,7 @@ export function ProductCard({ product }: { product: ProductCardItem }) {
 
         <div className="mt-auto pt-2">
           <div className="flex items-baseline gap-2">
-            <span className="font-display text-xl font-bold text-steel-900">
+            <span className="font-display text-2xl font-bold text-steel-900">
               {formatPrice(product.priceCents)}
             </span>
             {discount > 0 && product.listPriceCents && (

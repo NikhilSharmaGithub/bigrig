@@ -177,24 +177,28 @@ export default async function ProductPage({ params }: Props) {
       <JsonLd data={breadcrumbLd} />
       <Breadcrumbs items={crumbs} />
 
-      <div className="mt-6 grid gap-8 lg:grid-cols-[1.05fr_1fr]">
+      <div className="mt-6 grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:items-start">
         {/* Gallery */}
-        <ProductGallery images={product.images} name={product.name} />
+        <div className="rounded-lg border border-border bg-white p-4 lg:sticky lg:top-40">
+          <ProductGallery images={product.images} name={product.name} />
+        </div>
 
         {/* Buy box / key info */}
         <div>
           {product.brand && (
             <Link
               href={`/brands/${product.brand.slug}`}
-              className="text-sm font-semibold uppercase tracking-wide text-brand hover:underline"
+              className="font-display text-base font-bold uppercase tracking-wider text-brand hover:underline"
             >
               {product.brand.name}
             </Link>
           )}
-          <h1 className="font-display mt-1 text-3xl font-bold leading-tight text-steel-900">
+          <h1 className="font-display mt-1 text-4xl font-bold uppercase leading-[1.05] tracking-tight text-steel-900 sm:text-5xl">
             {product.name}
           </h1>
-          <p className="mt-1 text-sm text-steel-500">Part #{product.partNumber}</p>
+          <p className="mt-2 inline-block rounded bg-steel-100 px-2 py-0.5 font-mono text-sm text-steel-700">
+            Part # {product.partNumber}
+          </p>
 
           <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             {product.ratingCount > 0 ? (
@@ -254,9 +258,9 @@ export default async function ProductPage({ params }: Props) {
           )}
 
           {/* Price + buy */}
-          <div className="mt-5 rounded-xl border border-border bg-surface p-5">
+          <div className="mt-5 rounded-lg border-2 border-steel-900 bg-white p-5 shadow-sm">
             <div className="flex items-baseline gap-3">
-              <span className="font-display text-4xl font-bold text-steel-900">
+              <span className="font-display text-5xl font-bold text-steel-900">
                 {formatPrice(product.priceCents)}
               </span>
               {discount > 0 && product.listPriceCents && (
@@ -282,7 +286,7 @@ export default async function ProductPage({ params }: Props) {
               className="mt-3 rounded-md border border-border px-4 py-2 text-sm font-semibold text-steel-700 hover:border-brand hover:text-brand"
             />
             <AddToListButton slug={product.slug} />
-            <ul className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-4 text-xs text-steel-600">
+            <ul className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-4 text-xs font-medium text-steel-600">
               <li>✓ Fitment listed by truck</li>
               <li>✓ 30-day returns</li>
               <li>✓ Ships from Dallas, TX</li>
@@ -293,11 +297,32 @@ export default async function ProductPage({ params }: Props) {
       </div>
 
       {/* Details */}
-      <div className="mt-12 grid gap-10 lg:grid-cols-3">
+      <nav
+        aria-label="Product sections"
+        className="mt-12 flex gap-1 overflow-x-auto border-b border-border text-sm font-semibold"
+      >
+        {[
+          ["#details", "Description"],
+          ...(product.specs.length > 0 ? [["#specs", "Specifications"]] : []),
+          ["#fitment", "Fitment"],
+          ["#reviews", "Reviews"],
+          ["#questions", "Q&A"],
+        ].map(([href, label]) => (
+          <a
+            key={href}
+            href={href}
+            className="font-display whitespace-nowrap border-b-2 border-transparent px-4 py-2.5 text-base uppercase tracking-wider text-steel-600 hover:border-brand hover:text-brand"
+          >
+            {label}
+          </a>
+        ))}
+      </nav>
+
+      <div id="details" className="mt-8 grid scroll-mt-40 gap-10 lg:grid-cols-3">
         <div className="lg:col-span-2">
           {paragraphs.length > 0 && (
             <section>
-              <h2 className="font-display border-b-2 border-steel-900 pb-2 text-xl font-bold uppercase tracking-wide text-steel-900">
+              <h2 className="font-display border-b-2 border-steel-900 pb-2 text-2xl font-bold uppercase tracking-wide text-steel-900">
                 Product Description
               </h2>
               <div className="mt-4 space-y-3 leading-relaxed text-steel-700">
@@ -310,7 +335,7 @@ export default async function ProductPage({ params }: Props) {
 
           {highlights.length > 0 && (
             <section className="mt-8">
-              <h2 className="font-display border-b-2 border-steel-900 pb-2 text-xl font-bold uppercase tracking-wide text-steel-900">
+              <h2 className="font-display border-b-2 border-steel-900 pb-2 text-2xl font-bold uppercase tracking-wide text-steel-900">
                 Key Features
               </h2>
               <ul className="mt-4 grid gap-2 sm:grid-cols-2">
@@ -325,8 +350,8 @@ export default async function ProductPage({ params }: Props) {
           )}
 
           {product.specs.length > 0 && (
-            <section className="mt-8">
-              <h2 className="font-display border-b-2 border-steel-900 pb-2 text-xl font-bold uppercase tracking-wide text-steel-900">
+            <section id="specs" className="mt-8 scroll-mt-40">
+              <h2 className="font-display border-b-2 border-steel-900 pb-2 text-2xl font-bold uppercase tracking-wide text-steel-900">
                 Specifications
               </h2>
               <table className="mt-3 w-full text-sm border-t border-border">
@@ -344,8 +369,8 @@ export default async function ProductPage({ params }: Props) {
         </div>
 
         {/* Fitment */}
-        <aside>
-          <h2 className="font-display border-b-2 border-steel-900 pb-2 text-xl font-bold uppercase tracking-wide text-steel-900">
+        <aside id="fitment" className="scroll-mt-40">
+          <h2 className="font-display border-b-2 border-steel-900 pb-2 text-2xl font-bold uppercase tracking-wide text-steel-900">
             Fits These Trucks
           </h2>
           {fitByMake.size > 0 ? (
@@ -376,10 +401,14 @@ export default async function ProductPage({ params }: Props) {
       )}
 
       {/* Reviews */}
-      <ProductReviews productId={product.id} slug={product.slug} />
+      <div id="reviews" className="scroll-mt-40">
+        <ProductReviews productId={product.id} slug={product.slug} />
+      </div>
 
       {/* Questions & Answers */}
-      <ProductQA productId={product.id} slug={product.slug} />
+      <div id="questions" className="scroll-mt-40">
+        <ProductQA productId={product.id} slug={product.slug} />
+      </div>
 
       {/* Related */}
       {related.length > 0 && (

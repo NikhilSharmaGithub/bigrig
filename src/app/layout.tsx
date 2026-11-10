@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Oswald } from "next/font/google";
+import { Commissioner, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -7,14 +7,14 @@ import { JsonLd } from "@/components/seo/JsonLd";
 import { WishlistProvider } from "@/components/wishlist/WishlistProvider";
 import { SITE } from "@/lib/site";
 
-const inter = Inter({
-  variable: "--font-inter",
+const commissioner = Commissioner({
+  variable: "--font-sans-body",
   subsets: ["latin"],
   display: "swap",
 });
 
-const oswald = Oswald({
-  variable: "--font-oswald",
+const barlowCondensed = Barlow_Condensed({
+  variable: "--font-display-head",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   display: "swap",
@@ -67,7 +67,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${oswald.variable} h-full antialiased`}
+      className={`${commissioner.variable} ${barlowCondensed.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col bg-background">
         <JsonLd
