@@ -289,7 +289,8 @@ export default async function ProductPage({ params }: Props) {
             <ul className="mt-4 grid grid-cols-2 gap-2 border-t border-border pt-4 text-xs font-medium text-steel-600">
               <li>✓ Fitment listed by truck</li>
               <li>✓ 30-day returns</li>
-              <li>✓ Ships from Dallas, TX</li>
+              {/* Marketplace listings ship from the vendor, not our Dallas warehouse. */}
+              <li>✓ Ships from {product.vendor ? product.vendor.storeName : "Dallas, TX"}</li>
               <li>✓ Email support</li>
             </ul>
           </div>
