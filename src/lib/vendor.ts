@@ -82,6 +82,8 @@ export async function getVendorProductById(vendorId: string, id: string) {
     with: {
       inventory: true,
       images: { orderBy: (i, { asc }) => asc(i.position) },
+      specs: { orderBy: (sp, { asc }) => asc(sp.position) },
+      crossReferences: { orderBy: (c, { asc }) => asc(c.position) },
     },
   });
 }
