@@ -96,6 +96,8 @@ export default async function ProductPage({ params }: Props) {
   const highlights = splitLines(product.highlights);
   const paragraphs = splitParagraphs(product.description);
   const rating = Number(product.ratingAvg);
+  const sectionHeading =
+    "font-display rounded-md bg-steel-100 px-4 py-3 text-2xl font-bold uppercase tracking-wide text-steel-900";
 
   const fitByMake = new Map<string, string[]>();
   for (const f of product.fitment) {
@@ -304,6 +306,7 @@ export default async function ProductPage({ params }: Props) {
         {[
           ["#details", "Description"],
           ...(product.specs.length > 0 ? [["#specs", "Specifications"]] : []),
+          ...(product.crossReferences.length > 0 ? [["#cross-references", "Cross References"]] : []),
           ["#fitment", "Fitment"],
           ["#reviews", "Reviews"],
           ["#questions", "Q&A"],
@@ -319,47 +322,99 @@ export default async function ProductPage({ params }: Props) {
       </nav>
 
       <div id="details" className="mt-8 grid scroll-mt-40 gap-10 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          {paragraphs.length > 0 && (
+        <div className="space-y-10 lg:col-span-2">
+          {/* Part description */}
+          {(product.manufacturer ||
+            product.shortDescription ||
+            highlights.length > 0 ||
+            paragraphs.length > 0 ||
+            product.vmrsCode) && (
             <section>
-              <h2 className="font-display border-b-2 border-steel-900 pb-2 text-2xl font-bold uppercase tracking-wide text-steel-900">
-                Product Description
-              </h2>
-              <div className="mt-4 space-y-3 leading-relaxed text-steel-700">
-                {paragraphs.map((para, i) => (
-                  <p key={i}>{para}</p>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {highlights.length > 0 && (
-            <section className="mt-8">
-              <h2 className="font-display border-b-2 border-steel-900 pb-2 text-2xl font-bold uppercase tracking-wide text-steel-900">
-                Key Features
-              </h2>
-              <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-                {highlights.map((h, i) => (
-                  <li key={i} className="flex gap-2 rounded-lg border border-border bg-white p-3 text-sm text-steel-700">
-                    <span className="text-brand">✓</span>
-                    {h}
-                  </li>
-                ))}
-              </ul>
+              <h2 className={sectionHeading}>{product.partNumber} Part Description</h2>
+              <dl className="mt-4 space-y-5 text-sm text-steel-700">
+                {product.manufacturer && (
+                  <div>
+                    <dt className="font-bold text-steel-900">Manufacturer</dt>
+                    <dd className="mt-1">{product.manufacturer}</dd>
+                  </div>
+                )}
+                {product.shortDescription && (
+                  <div>
+                    <dt className="font-bold text-steel-900">Product Description</dt>
+                    <dd className="mt-1">{product.shortDescription}</dd>
+                  </div>
+                )}
+                {highlights.length > 0 && (
+                  <div>
+                    <dt className="font-bold text-steel-900">Features &amp; Benefits</dt>
+                    <dd>
+                      <ul className="mt-2 space-y-1.5">
+                        {highlights.map((h, i) => (
+                          <li key={i} className="flex gap-2">
+                            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+                            {h}
+                          </li>
+                        ))}
+                      </ul>
+                    </dd>
+                  </div>
+                )}
+                {paragraphs.length > 0 && (
+                  <div>
+                    <dt className="font-bold text-steel-900">{product.name}</dt>
+                    <dd className="mt-1 space-y-3 leading-relaxed">
+                      {paragraphs.map((para, i) => (
+                        <p key={i}>{para}</p>
+                      ))}
+                    </dd>
+                  </div>
+                )}
+                {product.vmrsCode && (
+                  <div className="inline-flex overflow-hidden rounded-md border border-border text-sm">
+                    <dt className="bg-surface px-3 py-2 font-bold text-steel-900">VMRS Code</dt>
+                    <dd className="px-3 py-2">{product.vmrsCode}</dd>
+                  </div>
+                )}
+              </dl>
             </section>
           )}
 
           {product.specs.length > 0 && (
-            <section id="specs" className="mt-8 scroll-mt-40">
-              <h2 className="font-display border-b-2 border-steel-900 pb-2 text-2xl font-bold uppercase tracking-wide text-steel-900">
-                Specifications
-              </h2>
-              <table className="mt-3 w-full text-sm border-t border-border">
+            <section id="specs" className="scroll-mt-40">
+              <h2 className={sectionHeading}>{product.partNumber} Specifications</h2>
+              <h3 className="mt-4 text-sm font-bold text-steel-900">Product Attributes</h3>
+              <table className="mt-2 w-full overflow-hidden rounded-md border border-border text-sm">
                 <tbody>
-                  {product.specs.map((s, idx) => (
-                    <tr key={s.id} className={`${idx % 2 === 0 ? 'bg-surface' : 'bg-white'} border-b border-border`}>
-                      <th className="w-1/3 py-3 px-4 text-left font-semibold text-steel-700">{s.name}</th>
-                      <td className="py-3 px-4 text-steel-900">{s.value}</td>
+                  {product.specs.map((sp, idx) => (
+                    <tr key={sp.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-surface"} border-b border-border last:border-b-0`}>
+                      <th className="w-1/3 border-r border-border px-4 py-2.5 text-left font-semibold text-steel-800">
+                        {sp.name}
+                      </th>
+                      <td className="px-4 py-2.5 text-steel-700">{sp.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </section>
+          )}
+
+          {product.crossReferences.length > 0 && (
+            <section id="cross-references" className="scroll-mt-40">
+              <h2 className={sectionHeading}>{product.partNumber} Cross References</h2>
+              <table className="mt-4 w-full overflow-hidden rounded-md border border-border text-sm">
+                <thead>
+                  <tr className="bg-steel-800 text-left text-white">
+                    <th className="w-1/3 border-r border-steel-600 px-4 py-2.5 font-semibold">Brand</th>
+                    <th className="px-4 py-2.5 font-semibold">Part Number</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {product.crossReferences.map((c, idx) => (
+                    <tr key={c.id} className={`${idx % 2 === 0 ? "bg-white" : "bg-surface"} border-b border-border last:border-b-0`}>
+                      <th className="border-r border-border px-4 py-2.5 text-left font-semibold text-steel-800">
+                        {c.brand}
+                      </th>
+                      <td className="px-4 py-2.5 text-steel-700">{c.partNumbers}</td>
                     </tr>
                   ))}
                 </tbody>
