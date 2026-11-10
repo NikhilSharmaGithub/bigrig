@@ -483,6 +483,29 @@ export async function deleteCategoryAction(id: string): Promise<void> {
   updateTag(NAV_CATEGORIES_TAG);
 }
 
+/** Only accept our own uploads (/uploads/…) or https image URLs. */
+function validLogoUrl(raw: string): string | null {
+  const u = raw.trim();
+  if (!u) return null;
+  if (u.startsWith("/uploads/") || /^https:\/\//i.test(u)) return u.slice(0, 1000);
+  return null;
+}
+
+/** Set or clear a brand's logo from the admin brands table. */
+export async function setBrandLogoAction(
+  id: string,
+  logoUrl: string | null,
+): Promise<AdminState> {
+  await requireAdmin();
+  const clean = logoUrl ? validLogoUrl(logoUrl) : null;
+  if (logoUrl && !clean) return { error: "That logo address isn't valid." };
+  await db.update(brands).set({ logoUrl: clean }).where(eq(brands.id, id));
+  revalidatePath("/admin/brands");
+  revalidatePath("/brands");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 export async function createBrandAction(
   _prev: AdminState,
   formData: FormData,
@@ -496,11 +519,13 @@ export async function createBrandAction(
       name,
       slug,
       description: f(formData, "description") || null,
+      logoUrl: validLogoUrl(f(formData, "logoUrl")),
     });
   } catch {
     return { error: "Could not create — is the slug unique?" };
   }
   revalidatePath("/admin/brands");
+  revalidatePath("/brands");
   return { ok: true };
 }
 
