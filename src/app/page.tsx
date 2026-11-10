@@ -2,7 +2,7 @@ import Link from "next/link";
 import { categories, topBrands, truckMakes } from "@/lib/catalog";
 import { featuredProducts } from "@/lib/sample-products";
 import type { ProductCardItem } from "@/lib/types";
-import { getTopSellers, getDeals } from "@/lib/queries";
+import { getTopSellers, getDeals, getAllBrands } from "@/lib/queries";
 import { discountPct, formatPrice } from "@/lib/format";
 import { ProductCard } from "@/components/product/ProductCard";
 import { HomeVehicleFinder } from "@/components/home/HomeVehicleFinder";
@@ -23,6 +23,17 @@ export default async function HomePage() {
   } catch {
     // No DB — keep the sample top-sellers, skip deals.
   }
+
+  // Brands from the database (admin-managed, with logos); fall back to the
+  // static list if none are available. Brands that have a logo come first.
+  const dbBrands = await getAllBrands();
+  const brandTiles: { slug: string; name: string; logoUrl: string | null }[] =
+    dbBrands.length > 0
+      ? [...dbBrands]
+          .sort((a, b) => Number(Boolean(b.logoUrl)) - Number(Boolean(a.logoUrl)))
+          .slice(0, 12)
+          .map((b) => ({ slug: b.slug, name: b.name, logoUrl: b.logoUrl }))
+      : topBrands.map((b) => ({ ...b, logoUrl: null }));
 
   return (
     <>
@@ -146,13 +157,24 @@ export default async function HomePage() {
             Heavy-Duty Brands We Carry
           </h2>
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {topBrands.map((b) => (
+            {brandTiles.map((b) => (
               <Link
                 key={b.slug}
                 href={`/brands/${b.slug}`}
-                className="font-display rounded border border-border bg-white px-4 py-3.5 text-lg font-bold uppercase tracking-wider text-steel-800 transition-colors hover:border-brand hover:text-brand"
+                title={b.name}
+                className="font-display flex h-16 items-center justify-center rounded border border-border bg-white px-4 text-lg font-bold uppercase tracking-wider text-steel-800 transition-colors hover:border-brand hover:text-brand"
               >
-                {b.name}
+                {b.logoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={b.logoUrl}
+                    alt={b.name}
+                    className="max-h-10 max-w-full object-contain"
+                    loading="lazy"
+                  />
+                ) : (
+                  b.name
+                )}
               </Link>
             ))}
           </div>

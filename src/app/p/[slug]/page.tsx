@@ -192,7 +192,16 @@ export default async function ProductPage({ params }: Props) {
               href={`/brands/${product.brand.slug}`}
               className="font-display text-base font-bold uppercase tracking-wider text-brand hover:underline"
             >
-              {product.brand.name}
+              {product.brand.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={product.brand.logoUrl}
+                  alt={product.brand.name}
+                  className="h-10 w-auto max-w-[140px] object-contain"
+                />
+              ) : (
+                product.brand.name
+              )}
             </Link>
           )}
           <h1 className="font-display mt-1 text-4xl font-bold uppercase leading-[1.05] tracking-tight text-steel-900 sm:text-5xl">
