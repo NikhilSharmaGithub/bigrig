@@ -3,6 +3,7 @@
 import { startTransition, useActionState } from "react";
 import { KeywordsInput } from "@/components/admin/KeywordsInput";
 import { ImageUploader } from "@/components/admin/ImageUploader";
+import { PairsEditor, type PairRow } from "@/components/admin/PairsEditor";
 
 type FormResult = { error?: string; ok?: boolean };
 type Option = { id: string; label: string };
@@ -18,6 +19,11 @@ export type ProductFormValues = {
   listPriceDollars?: string;
   description?: string | null;
   highlights?: string | null;
+  manufacturer?: string | null;
+  shortDescription?: string | null;
+  vmrsCode?: string | null;
+  specs?: PairRow[];
+  crossRefs?: PairRow[];
   keywords?: string | null;
   metaTitle?: string | null;
   metaDescription?: string | null;
@@ -149,6 +155,47 @@ export function ProductForm({
             placeholder={"Fits Type 30 air brake systems\nCorrosion-resistant housing\nDirect bolt-on replacement"}
           />
         </Field>
+      </Section>
+
+      {/* Part description details */}
+      <Section title="Part Details" subtitle="Shown in the Part Description table on the product page.">
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Field label="Manufacturer">
+            <input name="manufacturer" defaultValue={v.manufacturer ?? ""} className={inputClass} placeholder="e.g. Meritor" />
+          </Field>
+          <Field label="Product description (short)" hint="The part type in a few words.">
+            <input name="shortDescription" defaultValue={v.shortDescription ?? ""} className={inputClass} placeholder="e.g. Driveline, U-Joint Assembly" />
+          </Field>
+          <Field label="VMRS code">
+            <input name="vmrsCode" defaultValue={v.vmrsCode ?? ""} className={inputClass} placeholder="e.g. 024-002-046" />
+          </Field>
+        </div>
+      </Section>
+
+      {/* Specifications */}
+      <Section title="Specifications" subtitle="Product attributes — one row per spec (e.g. Bearing diameter → 2.06 in.).">
+        <PairsEditor
+          name="specs"
+          defaultRows={v.specs ?? []}
+          labelA="Attribute"
+          labelB="Value"
+          placeholderA="Bearing diameter"
+          placeholderB="2.06 in."
+          addLabel="Add specification"
+        />
+      </Section>
+
+      {/* Cross references */}
+      <Section title="Cross References" subtitle="Matching part numbers from other brands. Brand is optional; separate several part numbers with commas.">
+        <PairsEditor
+          name="crossRefs"
+          defaultRows={v.crossRefs ?? []}
+          labelA="Brand"
+          labelB="Part number(s)"
+          placeholderA="Automann"
+          placeholderB="7521225R"
+          addLabel="Add cross reference"
+        />
       </Section>
 
       {/* SEO */}

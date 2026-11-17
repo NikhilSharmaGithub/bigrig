@@ -21,6 +21,7 @@ import { NAV_CATEGORIES_TAG } from "@/lib/queries";
 import { productListReturnUrl } from "@/lib/admin-list";
 import { slugify } from "@/lib/vendor";
 import { parseImageUrls, replaceProductImages } from "@/lib/products";
+import { parsePairs, replaceProductSpecs, replaceProductCrossRefs } from "@/lib/product-extras";
 import { setCommissionBps, updateStoreSettings } from "@/lib/settings";
 import { sendOrderStatusEmail } from "@/lib/email";
 
@@ -99,6 +100,9 @@ export async function createProductAction(
         listPriceCents: dollarsToCents(f(formData, "listPrice")),
         description: f(formData, "description") || null,
         highlights: f(formData, "highlights") || null,
+        manufacturer: f(formData, "manufacturer") || null,
+        shortDescription: f(formData, "shortDescription") || null,
+        vmrsCode: f(formData, "vmrsCode") || null,
         keywords: f(formData, "keywords") || null,
         metaTitle: f(formData, "metaTitle") || null,
         metaDescription: f(formData, "metaDescription") || null,
@@ -116,6 +120,12 @@ export async function createProductAction(
   }
 
   await replaceProductImages(productId, parseImageUrls(f(formData, "images")));
+  if (formData.has("specs")) {
+  await replaceProductSpecs(productId, parsePairs(f(formData, "specs"), { requireA: true }));
+  }
+  if (formData.has("crossRefs")) {
+  await replaceProductCrossRefs(productId, parsePairs(f(formData, "crossRefs"), { requireA: false }));
+  }
   revalidatePath("/admin/products");
   updateTag(NAV_CATEGORIES_TAG);
   redirect(productListReturnUrl(formData.get("returnTo")));
@@ -149,6 +159,9 @@ export async function updateProductAction(
       listPriceCents: dollarsToCents(f(formData, "listPrice")),
       description: f(formData, "description") || null,
       highlights: f(formData, "highlights") || null,
+      manufacturer: f(formData, "manufacturer") || null,
+      shortDescription: f(formData, "shortDescription") || null,
+      vmrsCode: f(formData, "vmrsCode") || null,
       keywords: f(formData, "keywords") || null,
       metaTitle: f(formData, "metaTitle") || null,
       metaDescription: f(formData, "metaDescription") || null,
@@ -171,6 +184,12 @@ export async function updateProductAction(
   }
 
   await replaceProductImages(id, parseImageUrls(f(formData, "images")));
+  if (formData.has("specs")) {
+  await replaceProductSpecs(id, parsePairs(f(formData, "specs"), { requireA: true }));
+  }
+  if (formData.has("crossRefs")) {
+  await replaceProductCrossRefs(id, parsePairs(f(formData, "crossRefs"), { requireA: false }));
+  }
   revalidatePath("/admin/products");
   updateTag(NAV_CATEGORIES_TAG);
   // Back to the page/search the admin was on, scrolled to the row they edited.
@@ -464,6 +483,29 @@ export async function deleteCategoryAction(id: string): Promise<void> {
   updateTag(NAV_CATEGORIES_TAG);
 }
 
+/** Only accept our own uploads (/uploads/…) or https image URLs. */
+function validLogoUrl(raw: string): string | null {
+  const u = raw.trim();
+  if (!u) return null;
+  if (u.startsWith("/uploads/") || /^https:\/\//i.test(u)) return u.slice(0, 1000);
+  return null;
+}
+
+/** Set or clear a brand's logo from the admin brands table. */
+export async function setBrandLogoAction(
+  id: string,
+  logoUrl: string | null,
+): Promise<AdminState> {
+  await requireAdmin();
+  const clean = logoUrl ? validLogoUrl(logoUrl) : null;
+  if (logoUrl && !clean) return { error: "That logo address isn't valid." };
+  await db.update(brands).set({ logoUrl: clean }).where(eq(brands.id, id));
+  revalidatePath("/admin/brands");
+  revalidatePath("/brands");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 export async function createBrandAction(
   _prev: AdminState,
   formData: FormData,
@@ -477,11 +519,13 @@ export async function createBrandAction(
       name,
       slug,
       description: f(formData, "description") || null,
+      logoUrl: validLogoUrl(f(formData, "logoUrl")),
     });
   } catch {
     return { error: "Could not create — is the slug unique?" };
   }
   revalidatePath("/admin/brands");
+  revalidatePath("/brands");
   return { ok: true };
 }
 

@@ -40,6 +40,17 @@ export default async function BrandsPage() {
             href={`/brands/${b.slug}`}
             className="flex flex-col rounded-lg border border-border bg-white p-5 transition-all hover:border-brand hover:shadow-md"
           >
+            {b.logoUrl && (
+              <span className="mb-3 grid h-16 place-items-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={b.logoUrl}
+                  alt={`${b.name} logo`}
+                  className="max-h-16 max-w-full object-contain"
+                  loading="lazy"
+                />
+              </span>
+            )}
             <span className="font-display text-xl font-bold text-steel-900">
               {b.name}
             </span>
