@@ -34,9 +34,19 @@ export default async function BrandPage({ params, searchParams }: Props) {
     <div className="mx-auto max-w-7xl px-4 py-6">
       <Breadcrumbs items={[{ label: "Brands", href: "/brands" }, { label: brand.name }]} />
       <div className="mt-4 border-b-2 border-steel-900 pb-3">
-        <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-steel-900">
-          {brand.name}
-        </h1>
+        <div className="flex items-center gap-4">
+          {brand.logoUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={brand.logoUrl}
+              alt={`${brand.name} logo`}
+              className="h-14 w-auto max-w-[160px] object-contain"
+            />
+          )}
+          <h1 className="font-display text-3xl font-bold uppercase tracking-wide text-steel-900">
+            {brand.name}
+          </h1>
+        </div>
         {brand.description && (
           <p className="mt-1 max-w-2xl text-steel-500">{brand.description}</p>
         )}

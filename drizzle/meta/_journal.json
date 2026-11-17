@@ -50,6 +50,13 @@
       "when": 1794006587661,
       "tag": "0006_soft_delete_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1794336924874,
+      "tag": "0007_fluffy_carlie_cooper",
+      "breakpoints": true
     }
   ]
 }

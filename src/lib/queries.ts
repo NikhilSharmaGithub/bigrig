@@ -336,6 +336,7 @@ export async function getProductBySlug(slug: string) {
       vendor: true,
       images: { orderBy: (i, { asc }) => asc(i.position) },
       specs: { orderBy: (sp, { asc }) => asc(sp.position) },
+      crossReferences: { orderBy: (c, { asc }) => asc(c.position) },
       inventory: true,
       fitment: { with: { vehicle: true } },
     },
