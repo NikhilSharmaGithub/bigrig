@@ -10,6 +10,7 @@ import { inventory, products, vendors } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { getVendorForUser, requireVendor, slugify } from "@/lib/vendor";
 import { parseImageUrls, replaceProductImages } from "@/lib/products";
+import { parsePairs, replaceProductSpecs, replaceProductCrossRefs } from "@/lib/product-extras";
 import { getStripe, isStripeConfigured } from "@/lib/stripe";
 
 function originFromHeaders(h: Headers): string {
@@ -105,6 +106,9 @@ export async function createVendorProductAction(
         listPriceCents: dollarsToCents(f(formData, "listPrice")),
         description: f(formData, "description") || null,
         highlights: f(formData, "highlights") || null,
+        manufacturer: f(formData, "manufacturer") || null,
+        shortDescription: f(formData, "shortDescription") || null,
+        vmrsCode: f(formData, "vmrsCode") || null,
         keywords: f(formData, "keywords") || null,
         metaTitle: f(formData, "metaTitle") || null,
         metaDescription: f(formData, "metaDescription") || null,
@@ -122,6 +126,12 @@ export async function createVendorProductAction(
   }
 
   await replaceProductImages(productId, parseImageUrls(f(formData, "images")));
+  if (formData.has("specs")) {
+  await replaceProductSpecs(productId, parsePairs(f(formData, "specs"), { requireA: true }));
+  }
+  if (formData.has("crossRefs")) {
+  await replaceProductCrossRefs(productId, parsePairs(f(formData, "crossRefs"), { requireA: false }));
+  }
   revalidatePath("/vendor/products");
   redirect(
     productListReturnUrl(formData.get("returnTo"), undefined, VENDOR_PRODUCTS),
@@ -163,6 +173,9 @@ export async function updateVendorProductAction(
         listPriceCents: dollarsToCents(f(formData, "listPrice")),
         description: f(formData, "description") || null,
         highlights: f(formData, "highlights") || null,
+        manufacturer: f(formData, "manufacturer") || null,
+        shortDescription: f(formData, "shortDescription") || null,
+        vmrsCode: f(formData, "vmrsCode") || null,
         keywords: f(formData, "keywords") || null,
         metaTitle: f(formData, "metaTitle") || null,
         metaDescription: f(formData, "metaDescription") || null,
@@ -189,6 +202,12 @@ export async function updateVendorProductAction(
   }
 
   await replaceProductImages(id, parseImageUrls(f(formData, "images")));
+  if (formData.has("specs")) {
+  await replaceProductSpecs(id, parsePairs(f(formData, "specs"), { requireA: true }));
+  }
+  if (formData.has("crossRefs")) {
+  await replaceProductCrossRefs(id, parsePairs(f(formData, "crossRefs"), { requireA: false }));
+  }
   revalidatePath("/vendor/products");
   // Back to the page/search the vendor was on, scrolled to the row they edited.
   redirect(productListReturnUrl(formData.get("returnTo"), id, VENDOR_PRODUCTS));

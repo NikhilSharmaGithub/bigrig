@@ -1,14 +1,21 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { BrandLogoUploader } from "@/components/admin/BrandLogoUploader";
 import { createBrandAction, type AdminState } from "@/app/actions/admin";
 
 const ipt =
   "w-full rounded-md border border-border bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand";
 
 export function BrandCreateForm() {
+  // Bumped after each successful add so the logo preview resets with the form.
+  const [formKey, setFormKey] = useState(0);
   const [state, formAction, pending] = useActionState<AdminState, FormData>(
-    createBrandAction,
+    async (prev, formData) => {
+      const result = await createBrandAction(prev, formData);
+      if (result.ok) setFormKey((k) => k + 1);
+      return result;
+    },
     {},
   );
   const ref = useRef<HTMLFormElement>(null);
@@ -21,6 +28,9 @@ export function BrandCreateForm() {
       <input name="name" placeholder="Name *" required className={ipt} />
       <input name="slug" placeholder="slug (auto if blank)" className={ipt} />
       <input name="description" placeholder="Description (optional)" className={ipt} />
+      <div className="sm:col-span-3">
+        <BrandLogoUploader key={formKey} name="logoUrl" />
+      </div>
       <div className="sm:col-span-3">
         {state.error && <p className="mb-2 text-sm text-danger">{state.error}</p>}
         {state.ok && <p className="mb-2 text-sm text-success">Brand added.</p>}

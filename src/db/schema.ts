@@ -101,6 +101,10 @@ export const products = pgTable(
     description: text("description"),
     // "About this item" bullet points (newline-separated).
     highlights: text("highlights"),
+    // Part Description table: maker, short product-type line, VMRS code.
+    manufacturer: text("manufacturer"),
+    shortDescription: text("short_description"),
+    vmrsCode: text("vmrs_code"),
     // SEO: comma-separated keywords + optional meta overrides for Google.
     keywords: text("keywords"),
     metaTitle: text("meta_title"),
@@ -157,6 +161,23 @@ export const productSpecs = pgTable(
     position: integer("position").notNull().default(0),
   },
   (t) => [index("product_specs_product_idx").on(t.productId)],
+);
+
+/** Cross references: other brands' part numbers that match this part. */
+export const productCrossReferences = pgTable(
+  "product_cross_references",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    // Optional: some rows list part numbers with no brand.
+    brand: text("brand"),
+    // One or more part numbers, comma-separated.
+    partNumbers: text("part_numbers").notNull(),
+    position: integer("position").notNull().default(0),
+  },
+  (t) => [index("product_cross_refs_product_idx").on(t.productId)],
 );
 
 export const inventory = pgTable("inventory", {
@@ -591,6 +612,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   }),
   images: many(productImages),
   specs: many(productSpecs),
+  crossReferences: many(productCrossReferences),
   inventory: one(inventory),
   fitment: many(productFitment),
   reviews: many(reviews),
@@ -620,6 +642,16 @@ export const productSpecsRelations = relations(productSpecs, ({ one }) => ({
     references: [products.id],
   }),
 }));
+
+export const productCrossReferencesRelations = relations(
+  productCrossReferences,
+  ({ one }) => ({
+    product: one(products, {
+      fields: [productCrossReferences.productId],
+      references: [products.id],
+    }),
+  }),
+);
 
 export const inventoryRelations = relations(inventory, ({ one }) => ({
   product: one(products, {
