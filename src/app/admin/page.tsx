@@ -43,6 +43,13 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
+      {d.degraded.length > 0 && (
+        <p role="status" className="mt-4 rounded-md border border-accent bg-accent/10 px-4 py-3 text-sm text-steel-800">
+          Some dashboard sections are slow or unavailable right now ({d.degraded.join(", ")}) and show
+          empty values. Reload in a minute. The rest of the admin still works.
+        </p>
+      )}
+
       {/* KPIs */}
       <div className="mt-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         {kpis.map((k) => (
